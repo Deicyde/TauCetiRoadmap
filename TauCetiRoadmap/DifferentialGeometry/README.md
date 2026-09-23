@@ -154,14 +154,22 @@ Each item is imported by `Suggested.lean` and used in a compiled statement there
   (`CovariantDerivative.leviCivita`, uniqueness, `C^∞` regularity as an instance),
   `…/Riemannian/Riesz.lean` (`Riemannian.Tensor.rieszDual`), `…/Riemannian/Geodesic/`. Layer 12
   builds on top.
-- **Smooth 2-forms**: `Geometry/Manifold/TwoForm.lean` (`TauCeti.SmoothTwoForm`, closedness
-  undefined there); 0.4 identifies it with `Ω²`.
 - **Flows on Lie groups** (Lie-groups roadmap): `Geometry/Lie/{IntegralCurve,Exponential/*}.lean`
   (`mulInvariantIntegralCurve`, `lieExp`, `contMDiff_lieExp`); 3.3 reconciles by name.
 - **Sard, flat**: `Analysis/Calculus/Sard/` (`Differentiable.dense_compl_image_criticalPoints`);
   10.2 transfers it through charts.
 - **Slice charts and embeddings**: `Geometry/Manifold/{SmoothEmbedding,LocallyFlat}/`
   (`TauCeti.IsSliceChart`), `Geometry/Diffeomorphism/`.
+
+## Existing code to refactor
+
+**Smooth 2-forms**, currently defined separately in `Geometry/Manifold/TwoForm.lean` as
+`TauCeti.SmoothTwoForm`, migrate to the generic `SmoothForm I M ℝ 2` in layer 0.4. Refactor the
+existing implementation, its API and its symplectic consumers onto that carrier. Any retained
+`SmoothTwoForm` name is an abbreviation for the generic type, with compatibility operations
+derived from the generic API. The current definition is imported in `Suggested.lean` only to
+state the migration's preservation law against the pinned dependency. Closedness, absent from
+the current implementation, is supplied by layer 1's `mextDeriv`.
 
 ## What is missing (build here)
 
@@ -226,9 +234,17 @@ Names in backticks are the declarations of `Suggested.lean`, which carries the e
   `SmoothForm I M F k` is its trivial-bundle specialization, closed under the paired wedge for
   every fixed continuous bilinear pairing. General fibrewise products use a smooth bundle pairing.
   In particular, `V x →L[ℝ] V x` is an allowed value fibre: curvature can be typed as an
-  endomorphism-valued 2-form (`CurvatureForm`). `smoothFormTwoEquiv` identifies scalar `Ω²` with
-  `TauCeti.SmoothTwoForm`. *Acceptance:* over
-  `𝓘(ℝ, E)`, `mpullback` is the flat pullback (`mpullback_eq_flat`).
+  endomorphism-valued 2-form (`CurvatureForm`). Refactor Tau Ceti's existing `SmoothTwoForm`
+  implementation and its callers to use `SmoothForm I M ℝ 2`; retain the old name only as an
+  abbreviation if needed. The existing bilinear evaluation, algebraic bilinear-form view,
+  smooth evaluation and constant-form API must follow from the generic API, reusing its algebra
+  instances. Callers use tuple evaluation or a named two-vector adapter, without a competing
+  coercion on degree-two forms. The linear equivalence `legacySmoothTwoFormEquiv` and its
+  evaluation law compare with the pinned old definition as a migration check. *Acceptance:*
+  the old independent carrier is removed; `Geometry/Symplectic/Manifold/{TwoForm,Energy}.lean`
+  compiles on the generic carrier with nondegeneracy, tameness, compatibility, constant-form
+  normalization and energy identities preserved; and over `𝓘(ℝ, E)`, `mpullback` is the flat
+  pullback (`mpullback_eq_flat`).
 
 ### Layer 1: the exterior derivative
 
@@ -554,7 +570,8 @@ One owner per shared construction, stated identically on both sides.
   covers.
 - **PDE** owns everything analytic about `Δ` beyond 12.5. **DG and `A∞`** owns the generic DGA
   packaging; the wedge and cup products on cohomology are built here. **Heegaard Floer (analytic)**
-  consumes orientations and degree and refactors its 2-forms through 0.4 and 6.1. **Contour
+  consumes orientations and degree; layer 0.4 owns migration of its existing 2-form API and
+  consumers to the generic carrier, and 6.1 supplies the integration interface. **Contour
   integration** owns contour integrals; 5.3 only reconciles with `curveIntegral`. **One-parameter
   semigroups** owns the operator-semigroup analogue of flows. **Modular forms** may refactor its
   region-Stokes onto layer 5 at its own choice.

@@ -55,9 +55,13 @@ boundary manifold (`TauCeti.isManifold_boundary`), the manifold inverse function
 this file in place), finite-dimensional smooth dependence of flows
 (`ODE.exists_contDiffAt_localFlow`), flat Sard (`Differentiable.dense_compl_image_criticalPoints`),
 the Riesz duality of a Riemannian bundle (`Riemannian.Tensor.rieszDual`), the Levi-Civita
-connection (`CovariantDerivative.leviCivita`), smooth 2-forms (`TauCeti.SmoothTwoForm`),
-slice charts (`TauCeti.IsSliceChart`), and the invariant integral curves of a Lie group
+connection (`CovariantDerivative.leviCivita`), slice charts (`TauCeti.IsSliceChart`),
+and the invariant integral curves of a Lie group
 (`mulInvariantIntegralCurve`).
+
+The existing `TauCeti.SmoothTwoForm` is imported only to state layer 0.4's migration check
+against the pinned dependency. Its implementation and consumers must be refactored onto
+`SmoothForm I M ℝ 2`; any retained old name abbreviates that generic carrier.
 
 `sorry` is allowed here (human-owned roadmap territory). No declaration carrying `sorry` is a
 global instance: anything that should eventually be one (`ContMDiffVectorBundle` for the
@@ -663,18 +667,25 @@ theorem smoothForms_wedge_mem [IsManifold I 1 M] [IsManifold I ∞ M] (φ : Smoo
     (η : SmoothForm I M ℝ l) : (φ : RoughForm I M ℝ k).wedge η ∈ smoothForms I M ℝ (k + l) :=
   smoothForms_wedgeWith_mem (ContinuousLinearMap.mul ℝ ℝ) φ η
 
-/-- **Layer 0.4, the bridge to Tau Ceti's symplectic lane.** A smooth 2-form in the sense of
-this roadmap is a `TauCeti.SmoothTwoForm`, and conversely; the two notions are identified by
-an equivalence, with the evaluation law `toSmoothTwoForm_apply`. The Heegaard Floer lane
-defines "closed" exactly once, through `mextDeriv`, via this bridge. -/
-noncomputable def smoothFormTwoEquiv [IsManifold I 1 M] [IsManifold I ∞ M] :
-    SmoothForm I M ℝ 2 ≃ TauCeti.SmoothTwoForm I M :=
+/-- **Layer 0.4, migration of Tau Ceti's existing two-form code.** This linear equivalence checks
+that the pinned old representation migrates to the generic carrier preserving algebra and evaluation.
+Completing the layer requires refactoring `Geometry/Manifold/TwoForm.lean` and its consumers
+onto `SmoothForm I M ℝ 2`, retaining `SmoothTwoForm` only as an abbreviation if needed.
+The old independent structure is removed; this comparison with the pinned dependency is
+a migration check, not a permanent pair of form types. The bilinear-form view, smooth
+evaluation and constant-form API are derived from the generic API, preserving the symplectic
+consumers' evaluation and energy identities. Callers use tuple evaluation or a named two-vector
+adapter, reusing the generic coercion and algebra instances. Closedness is defined through
+`mextDeriv`. -/
+noncomputable def legacySmoothTwoFormEquiv [IsManifold I 1 M] [IsManifold I ∞ M] :
+    TauCeti.SmoothTwoForm I M ≃ₗ[ℝ] SmoothForm I M ℝ 2 :=
   sorry
 
-theorem smoothFormTwoEquiv_apply [IsManifold I 1 M] [IsManifold I ∞ M] (φ : SmoothForm I M ℝ 2)
-    (x : M)
+/-- The migration preserves evaluation on each ordered pair of tangent vectors. -/
+theorem legacySmoothTwoFormEquiv_apply [IsManifold I 1 M] [IsManifold I ∞ M]
+    (φ : TauCeti.SmoothTwoForm I M) (x : M)
     (v w : TangentSpace I x) :
-    smoothFormTwoEquiv φ x v w = (φ : RoughForm I M ℝ 2) x ![v, w] :=
+    (legacySmoothTwoFormEquiv φ : RoughForm I M ℝ 2) x ![v, w] = φ x v w :=
   sorry
 
 /-- **Layer 0.4, acceptance.** Over the model `𝓘(ℝ, E)` the manifold pullback is the flat
