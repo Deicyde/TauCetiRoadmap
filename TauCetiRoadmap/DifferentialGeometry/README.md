@@ -33,9 +33,11 @@ State each hypothesis where it is used; never bake it in.
   and smooth approximation also need `[T2Space M] [SigmaCompactSpace M]`, carried visibly.
 - **Orientation** is chart-sign data (2.1), with fibers `Orientation ℝ (TangentSpace I x) ι` and an
   explicit `Fintype.card ι = finrank ℝ E`; the determinant criteria are theorems, not definitions.
-- **Wedge normalization**: the determinant convention `ω ∧ η = ((k+l)!/(k!·l!)) • Alt (ω ⊗ η)`, so
-  that `ε^I ∧ ε^J = ε^{I++J}`, top-degree wedges of covectors are determinants, and Leibniz holds
-  with unit constants. Record the conversion to [Lee]'s Alt convention where the wedge is defined.
+- **Wedge normalization**: for every pairing `μ`, `wedgeWith μ` is the sign-weighted sum over all
+  permutations divided by `k! l!`, equivalently the unscaled sum over `(k,l)`-shuffles, as in
+  `AlternatingMap.domCoprod`. This is `((k+l)!/(k!·l!)) • Alt (ω ⊗_μ η)`, so elementary covectors
+  multiply by concatenation, top-degree wedges are determinants, and Leibniz has unit constants.
+  `wedgeWith_apply` pins all degrees; `wedgeWith_apply_one_one` pins the two-term evaluation.
 - **Laplacian sign**: `Δ = div ∘ grad`, Mathlib's and the PDE roadmap's; [Lee, Problem 16-13ff] uses
   the negation, so every Laplacian identity imported from the book flips sign.
 - **Total functions, junk values**, in the `mfderiv` style, with the real hypotheses on the
@@ -177,7 +179,8 @@ Cited for design and migration, never as the definition of a target; coordinate 
 confirm licences before porting.
 
 - Yury Kudryashov's `github.com/urkud/DeRhamCohomology` (a wedge taking the pairing as an argument,
-  manifold forms): migration material for layers 0–1 and 6, and the first place to coordinate.
+  alternating maps between general vector bundles, with manifold `d` on the trivial scalar
+  specialization): migration material for layers 0–1 and 6, and the first place to coordinate.
   Design references only, per the convention above: mathlib4#35376 (chart-sign orientations), #26394
   and #26395 (flows), #33714 (metrics), #36845 (Levi-Civita, delivered in Tau Ceti by Hopf–Rinow).
 - `github.com/qinz1yang/differential-geometry` (Ziyang Qin, Jack McCarthy, Yuan Liao):
@@ -199,7 +202,9 @@ Names in backticks are the declarations of `Suggested.lean`, which carries the e
 
 - **0.1 The wedge.** The generic object is the paired wedge `wedgeWith μ`, with bilinearity, the
   norm bound, compatibility with `compContinuousLinearMap`, and the flip identity `wedgeWith_flip`
-  for every pairing; ⚠ associativity (`wedgeWith_assoc`) and graded commutativity hold only under
+  for every pairing. Its normalization is the explicit permutation formula `wedgeWith_apply`,
+  with `wedgeWith_apply_one_one` as the smallest evaluation gate; ⚠ associativity
+  (`wedgeWith_assoc`) and graded commutativity hold only under
   hypotheses on the pairings, since degree zero reduces them to `μ`. Specializations: the ℝ-valued
   `wedge` (pinned by `wedge_apply_one_one`), `wedgeMul` over a normed algebra, and `bracketWedge`
   along a skew bracket with graded skew-symmetry and Jacobi [Tu, *Differential Geometry*, GTM 275,
@@ -207,19 +212,30 @@ Names in backticks are the declarations of `Suggested.lean`, which carries the e
   here.
 - **0.2 The smooth alternating bundle.** The `ContMDiffVectorBundle` instance for
   `fun x ↦ E₁ x [⋀^ι]→L[ℝ] E₂ x`, mirroring `VectorBundle/Hom.lean`; all form bundles specialize it.
-- **0.3 Rough forms and pullback.** `RoughForm I M F k` with the predicate `IsSmoothForm`, and the
-  total pullback `mpullback` through `mfderiv`. Its chain rule carries the differentiability
-  hypotheses `mfderiv`'s does (`mpullback_comp_at/_on` and `mpullback_comp`); linearity and
-  `mpullback_wedge` are unconditional, and `C^(n+1)` maps pull `C^n` forms back to `C^n` forms.
-- **0.4 Bundled forms.** `SmoothForm I M F k`, the submodule of `C^∞` rough forms, closed under the
-  wedge, with `smoothFormTwoEquiv` identifying `Ω²` with `TauCeti.SmoothTwoForm`. *Acceptance:* over
+- **0.3 Rough forms and pullback.** The carrier is `RoughBundleForm I M V k`, with value fibre
+  `V x`; `RoughForm I M F k` is its `Bundle.Trivial M F` specialization. Smoothness is
+  `IsSmoothBundleForm` in the alternating bundle, specializing to `IsSmoothForm`. Bundle pullback
+  `bundleMpullback` through `mfderiv` takes values in the pulled-back bundle `fun x ↦ V (f x)`;
+  `bundleMpullback_wedgeWith` pulls back the fibrewise pairing as well as both forms. `mpullback` is the
+  fixed-coefficient specialization. Its chain rule carries the differentiability hypotheses
+  `mfderiv`'s does (`mpullback_comp_at/_on` and `mpullback_comp`). The pointwise paired product is
+  `RoughForm.wedgeWith`, identified with `bundleWedgeWith` by `bundleWedgeWith_trivial`;
+  `mpullback_wedgeWith` is unconditional, and `mpullback_wedge` is its real
+  multiplication specialization. `C^(n+1)` maps pull `C^n` forms back to `C^n` forms.
+- **0.4 Bundled forms.** `SmoothBundleForm` is the submodule of `C^∞` bundle-valued rough forms;
+  `SmoothForm I M F k` is its trivial-bundle specialization, closed under the paired wedge for
+  every fixed continuous bilinear pairing. General fibrewise products use a smooth bundle pairing.
+  In particular, `V x →L[ℝ] V x` is an allowed value fibre: curvature can be typed as an
+  endomorphism-valued 2-form (`CurvatureForm`). `smoothFormTwoEquiv` identifies scalar `Ω²` with
+  `TauCeti.SmoothTwoForm`. *Acceptance:* over
   `𝓘(ℝ, E)`, `mpullback` is the flat pullback (`mpullback_eq_flat`).
 
 ### Layer 1: the exterior derivative
 
 *[Lee, Ch. 14].*
 
-- **1.1 Definition.** `mextDerivWithin` conjugates `extDerivWithin` through `extChartAt` on
+- **1.1 Definition.** For fixed coefficients (the trivial-bundle specialization),
+  `mextDerivWithin` conjugates `extDerivWithin` through `extChartAt` on
   `(extChartAt I x).symm ⁻¹' s ∩ range I`, chart independence being `extDerivWithin_pullback`; then
   `mextDeriv`, locality, linearity, `mextDeriv_eq_extDeriv` over the model and
   `mextDeriv_ofFunction`.
@@ -228,10 +244,21 @@ Names in backticks are the declarations of `Suggested.lean`, which carries the e
 - **1.3 d² = 0 and regularity.** `mextDeriv_mextDeriv` for `C²` forms, and the new flat lemma
   `contDiffOn_extDerivWithin_succ` (`C^(n+1) → C^n` on `range I`) with its transfer
   `isSmoothForm_mextDeriv`, which is what lets `d` map `Ω^k` to `Ω^(k+1)`.
-- **1.4 Cartan calculus.** Leibniz with unit constants (`mextDeriv_wedge`), the invariant formulas
+- **1.4 Cartan calculus.** The vector-valued Leibniz law `mextDeriv_wedgeWith` for every fixed
+  continuous bilinear pairing `μ`, with `C¹` hypotheses and unit constants; `mextDeriv_wedge` is
+  its real multiplication specialization. This includes Lie brackets and the expression
+  `dω + ½[ω ∧ ω]`. A base-dependent pairing has a derivative term; arbitrary bundle coefficients
+  require a connection, and the covariant Leibniz law requires compatible connections on the
+  pairing's three bundles. Then the invariant formulas
   through `mlieBracket` [Lee, Prop. 14.29, 14.32], the Lie derivative of forms by the bracket
   formula (`mlieDerivForm`) [Lee, Cor. 12.33], and Cartan's magic formula [Lee, Thm. 14.35].
   *Acceptance:* on `ℝ²`, `d(x dy) = dx ∧ dy` and `d(dx) = 0`.
+
+The general bundle carrier does not supply a canonical exterior derivative. A connection supplies
+`d_∇`, whose square is curvature acting by wedge, `(d_∇)²ω = R_∇ ∧ ω`, rather than zero in general.
+Layers 0–1 provide these form carriers and the fixed-coefficient calculus without imposing a
+global trivialization on the value bundles. The Riemannian curvature construction remains in
+Geometric Topology.
 
 ### Layer 2: orientations and the orientation double cover
 

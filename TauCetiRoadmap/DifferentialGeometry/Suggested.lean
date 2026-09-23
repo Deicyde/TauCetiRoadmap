@@ -1,4 +1,26 @@
-import Mathlib
+import Mathlib.Algebra.Homology.Homotopy
+import Mathlib.Algebra.Homology.HomologicalComplexBiprod
+import Mathlib.Algebra.Homology.QuasiIso
+import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
+import Mathlib.AlgebraicTopology.FundamentalGroupoid.SimplyConnected
+import Mathlib.AlgebraicTopology.SingularHomology.Basic
+import Mathlib.Analysis.Calculus.DifferentialForm.VectorField
+import Mathlib.Analysis.Calculus.Gradient.Basic
+import Mathlib.Analysis.InnerProductSpace.Laplacian
+import Mathlib.Dynamics.Flow
+import Mathlib.Geometry.Manifold.Instances.Sphere
+import Mathlib.Geometry.Manifold.Instances.Icc
+import Mathlib.Geometry.Manifold.PartitionOfUnity
+import Mathlib.Geometry.Manifold.Riemannian.Basic
+import Mathlib.Geometry.Manifold.VectorBundle.Hom
+import Mathlib.Geometry.Manifold.VectorBundle.Pullback
+import Mathlib.LinearAlgebra.Orientation
+import Mathlib.MeasureTheory.Measure.Haar.OfBasis
+import Mathlib.MeasureTheory.Group.Circle
+import Mathlib.Topology.Covering.Basic
+import Mathlib.Topology.Homotopy.HomotopyGroup
+import Mathlib.Topology.LocallyConstant.Algebra
+import Mathlib.Topology.VectorBundle.ContinuousAlternatingMap
 import TauCeti.Analysis.Calculus.Sard.EqualDimension
 import TauCeti.Analysis.ODE.InitialCondition
 import TauCeti.Geometry.Lie.IntegralCurve
@@ -47,8 +69,8 @@ are real ones (the projections of `IntegralManifold`, scalar multiplication of d
 
 Conventions (see `README.md`): scalars `ℝ` where the geometry is real, `𝕜` where the
 statement is honestly general; the wedge follows the determinant convention, pinned by
-`wedge_apply_one_one`; hypotheses are unbundled and stated at their point of use; finite
-dimension, Hausdorffness and σ-compactness are written wherever they are used; measure
+`wedgeWith_apply` and `wedgeWith_apply_one_one`; hypotheses are unbundled and stated at their
+point of use; finite dimension, Hausdorffness and σ-compactness are written wherever they are used; measure
 statements carry `[MeasurableSpace M] [BorelSpace M]`. Elaborates against the pinned
 toolchain (sorry-warnings only).
 -/
@@ -69,7 +91,11 @@ variable {E F₁ F₂ F₃ F₁₂ F₂₃ G : Type*} [NormedAddCommGroup E] [No
 
 /-- **Layer 0.1.** The paired wedge product of continuous alternating maps, in the
 determinant convention, combining values through an explicit continuous bilinear map —
-the `wedge_product` shape of Kudryashov's `DeRhamCohomology`. At this generality the
+the `wedge_product` shape of Kudryashov's `DeRhamCohomology`. The normalization is the
+sign-weighted sum over all permutations divided by `k! * l!`, pinned in every degree by
+`wedgeWith_apply`. Equivalently it is the sum over `(k, l)`-shuffles with no factorial,
+matching `AlternatingMap.domCoprod`; if `Alt` divides by `(k + l)!`, the coefficient of
+`Alt (μ ∘ (φ ⊗ ψ))` is `(k + l)! / (k! * l!)`. At this generality the
 theorems are bilinearity, the norm bound, compatibility with `compContinuousLinearMap`,
 the characterization through alternatization, naturality in `μ`, and the *flip* identity
 `wedgeWith_flip`; associativity and graded commutativity are **not** theorems here
@@ -81,6 +107,26 @@ noncomputable def wedgeWith {k l : ℕ} (μ : F₁ →L[ℝ] F₂ →L[ℝ] F₃
   sorry
 
 variable {k l m : ℕ} {μ : F₁ →L[ℝ] F₂ →L[ℝ] F₃}
+
+/-- **Layer 0.1, all-degree normalization.** The paired wedge is the signed permutation
+sum divided by `k! * l!`. `Fin.castAdd l` selects the first `k` slots and `Fin.natAdd k`
+the last `l` slots; `Equiv.Perm.sign` acts through the usual sign action on an additive
+group. This is the determinant convention for every continuous bilinear pairing. -/
+theorem wedgeWith_apply (φ : E [⋀^Fin k]→L[ℝ] F₁) (ψ : E [⋀^Fin l]→L[ℝ] F₂)
+    (v : Fin (k + l) → E) :
+    wedgeWith μ φ ψ v =
+      ((k.factorial : ℝ) * (l.factorial : ℝ))⁻¹ •
+        ∑ σ : Equiv.Perm (Fin (k + l)), Equiv.Perm.sign σ •
+          μ (φ (fun i => v (σ (Fin.castAdd l i))))
+            (ψ (fun j => v (σ (Fin.natAdd k j)))) :=
+  sorry
+
+/-- **Layer 0.1, degree-one normalization.** The `(1, 1)` case of `wedgeWith_apply`:
+there is no factor `1/2`, for an arbitrary continuous bilinear pairing. -/
+theorem wedgeWith_apply_one_one (φ : E [⋀^Fin 1]→L[ℝ] F₁)
+    (ψ : E [⋀^Fin 1]→L[ℝ] F₂) (v w : E) :
+    wedgeWith μ φ ψ ![v, w] = μ (φ ![v]) (ψ ![w]) - μ (φ ![w]) (ψ ![v]) :=
+  sorry
 
 /-- **Layer 0.1.** Additivity in the first argument; with `wedgeWith_smul_left` and the
 right-hand variants this makes the paired wedge bilinear. -/
@@ -131,18 +177,19 @@ theorem wedgeWith_assoc (μ₁₂ : F₁ →L[ℝ] F₂ →L[ℝ] F₁₂) (μ�
 /-- **Layer 0.1.** The ℝ-valued wedge, the multiplication specialization of `wedgeWith`:
 `ω ∧ η = ((k+l)!/(k!·l!)) • Alt (ω ⊗ η)`, so that elementary covectors satisfy
 `ε^I ∧ ε^J = ε^{I++J}` and top-degree wedges of covectors are determinants. This is the
-graded-commutative associative case, and the normalization is pinned by
-`wedge_apply_one_one` below. -/
+graded-commutative associative case, with the normalization inherited from
+`wedgeWith_apply`; `wedge_apply_one_one` below specializes the paired degree-one law. -/
 noncomputable def wedge (φ : E [⋀^Fin k]→L[ℝ] ℝ) (ψ : E [⋀^Fin l]→L[ℝ] ℝ) :
     E [⋀^Fin (k + l)]→L[ℝ] ℝ :=
   wedgeWith (ContinuousLinearMap.mul ℝ ℝ) φ ψ
 
-/-- **Layer 0.1, normalization gate.** On two 1-forms the wedge is the 2×2 determinant.
-This pins the normalization: under the Alt convention the right-hand side would carry a
-factor `1/2`, and a `wedge := 0` filler fails here. -/
+/-- **Layer 0.1, scalar normalization gate.** On two 1-forms the wedge is the 2×2
+determinant, by the general paired identity `wedgeWith_apply_one_one`. Under the Alt
+convention the right-hand side would carry a factor `1/2`. -/
 theorem wedge_apply_one_one (φ ψ : E [⋀^Fin 1]→L[ℝ] ℝ) (v w : E) :
-    wedge φ ψ ![v, w] = φ ![v] * ψ ![w] - φ ![w] * ψ ![v] :=
-  sorry
+    wedge φ ψ ![v, w] = φ ![v] * ψ ![w] - φ ![w] * ψ ![v] := by
+  simpa only [wedge, ContinuousLinearMap.mul_apply'] using
+    (wedgeWith_apply_one_one (μ := ContinuousLinearMap.mul ℝ ℝ) φ ψ v w)
 
 /-- **Layer 0.1.** Left linearity in the scalar; with `wedge_add_left` and the right
 variants (not stated here) this makes the wedge bilinear. -/
@@ -249,6 +296,190 @@ end AlternatingBundle
 
 /-! ## Layer 0.3–0.4: rough and smooth forms on manifolds, pullback -/
 
+section BundleForms
+
+variable {E H M : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [TopologicalSpace H]
+  {I : ModelWithCorners ℝ E H} [TopologicalSpace M] [ChartedSpace H M]
+  {E' H' M' : Type*} [NormedAddCommGroup E'] [NormedSpace ℝ E'] [TopologicalSpace H']
+  {I' : ModelWithCorners ℝ E' H'} [TopologicalSpace M'] [ChartedSpace H' M']
+  {E'' H'' M'' : Type*} [NormedAddCommGroup E''] [NormedSpace ℝ E''] [TopologicalSpace H'']
+  {I'' : ModelWithCorners ℝ E'' H''} [TopologicalSpace M''] [ChartedSpace H'' M'']
+  {k : ℕ}
+
+/-- **Layer 0.3.** Rough forms with values in an arbitrary family of topological vector
+spaces. No global trivialization, fibre norm, regularity, or connection is part of the
+carrier. `RoughForm` below is precisely the trivial-bundle specialization. -/
+abbrev RoughBundleForm (I : ModelWithCorners ℝ E H) (M : Type*) [TopologicalSpace M]
+    [ChartedSpace H M] (V : M → Type*) [∀ x, AddCommGroup (V x)] [∀ x, Module ℝ (V x)]
+    [∀ x, TopologicalSpace (V x)] (k : ℕ) : Type _ :=
+  (x : M) → TangentSpace I x [⋀^Fin k]→L[ℝ] V x
+
+-- The pin supplies the pulled-back additive monoid/module and topology, but does not
+-- register the following stronger fibre instances. These are real local transports.
+local instance pullbackAddCommGroup {B B' : Type*} {V : B → Type*}
+    [∀ y, AddCommGroup (V y)] (f : B' → B) (x : B') : AddCommGroup ((f *ᵖ V) x) :=
+  inferInstanceAs (AddCommGroup (V (f x)))
+
+local instance pullbackIsTopologicalAddGroup {B B' : Type*} {V : B → Type*}
+    [∀ y, AddCommGroup (V y)] [∀ y, TopologicalSpace (V y)]
+    [∀ y, IsTopologicalAddGroup (V y)] (f : B' → B) (x : B') :
+    IsTopologicalAddGroup ((f *ᵖ V) x) :=
+  inferInstanceAs (IsTopologicalAddGroup (V (f x)))
+
+local instance pullbackContinuousSMul {B B' : Type*} {V : B → Type*}
+    [∀ y, AddCommGroup (V y)] [∀ y, Module ℝ (V y)] [∀ y, TopologicalSpace (V y)]
+    [∀ y, ContinuousSMul ℝ (V y)] (f : B' → B) (x : B') :
+    ContinuousSMul ℝ ((f *ᵖ V) x) :=
+  inferInstanceAs (ContinuousSMul ℝ (V (f x)))
+
+/-- **Layer 0.3.** Pullback changes the value bundle from `V` to `f *ᵖ V`, whose fibre at
+`x` is `V (f x)`. It needs no connection and is total, with the same differentiability
+requirements on its composition law as the scalar pullback. -/
+noncomputable def bundleMpullback (I : ModelWithCorners ℝ E H)
+    (I' : ModelWithCorners ℝ E' H') {V : M' → Type*}
+    [∀ y, AddCommGroup (V y)] [∀ y, Module ℝ (V y)] [∀ y, TopologicalSpace (V y)]
+    (f : M → M') (φ : RoughBundleForm I' M' V k) :
+    RoughBundleForm I M (f *ᵖ V) k :=
+  fun x ↦ (φ (f x)).compContinuousLinearMap (mfderiv I I' f x)
+
+theorem bundleMpullback_apply {V : M' → Type*}
+    [∀ y, AddCommGroup (V y)] [∀ y, Module ℝ (V y)] [∀ y, TopologicalSpace (V y)]
+    (f : M → M') (φ : RoughBundleForm I' M' V k) (x : M)
+    (v : Fin k → TangentSpace I x) :
+    bundleMpullback I I' f φ x v = φ (f x) (fun i ↦ mfderiv I I' f x (v i)) :=
+  rfl
+
+theorem bundleMpullback_id {V : M → Type*}
+    [∀ x, AddCommGroup (V x)] [∀ x, Module ℝ (V x)] [∀ x, TopologicalSpace (V x)]
+    (φ : RoughBundleForm I M V k) : bundleMpullback I I id φ = φ :=
+  sorry
+
+theorem bundleMpullback_comp {V : M'' → Type*}
+    [∀ z, AddCommGroup (V z)] [∀ z, Module ℝ (V z)] [∀ z, TopologicalSpace (V z)]
+    {f : M → M'} {g : M' → M''} (hf : MDifferentiable I I' f)
+    (hg : MDifferentiable I' I'' g) (φ : RoughBundleForm I'' M'' V k) :
+    bundleMpullback I I'' (g ∘ f) φ =
+      bundleMpullback I I' f (bundleMpullback I' I'' g φ) :=
+  sorry
+
+variable {F : Type*} [NormedAddCommGroup F] [NormedSpace ℝ F]
+  {V : M → Type*} [∀ x, AddCommGroup (V x)] [∀ x, Module ℝ (V x)]
+  [∀ x, TopologicalSpace (V x)] [TopologicalSpace (TotalSpace F V)]
+  [FiberBundle F V] [VectorBundle ℝ F V]
+  [∀ x, IsTopologicalAddGroup (V x)] [∀ x, ContinuousSMul ℝ (V x)]
+
+/-- **Layer 0.3.** A `C^n` form with values in `V` is a `C^n` section of the alternating
+bundle with fibres `TangentSpace I x [⋀^Fin k]→L[ℝ] V x`. The normed space `F` models
+`V` locally; it does not identify its fibres globally. -/
+def IsSmoothBundleForm (I : ModelWithCorners ℝ E H) (F : Type*)
+    [NormedAddCommGroup F] [NormedSpace ℝ F] (V : M → Type*)
+    [∀ x, AddCommGroup (V x)] [∀ x, Module ℝ (V x)] [∀ x, TopologicalSpace (V x)]
+    [TopologicalSpace (TotalSpace F V)] [FiberBundle F V] [VectorBundle ℝ F V]
+    [∀ x, IsTopologicalAddGroup (V x)] [∀ x, ContinuousSMul ℝ (V x)]
+    [IsManifold I 1 M] (n : WithTop ℕ∞) (φ : RoughBundleForm I M V k) : Prop :=
+  ContMDiff I (I.prod 𝓘(ℝ, E [⋀^Fin k]→L[ℝ] F)) n
+    (fun x ↦ TotalSpace.mk' (E [⋀^Fin k]→L[ℝ] F)
+      (E := fun x ↦ TangentSpace I x [⋀^Fin k]→L[ℝ] V x) x (φ x))
+
+/-- **Layer 0.4.** Smooth bundle-valued forms, as a submodule of rough forms. The
+membership theorem pins the provisional submodule; no global `sorry` instance is installed. -/
+def smoothBundleForms (I : ModelWithCorners ℝ E H) (F : Type*)
+    [NormedAddCommGroup F] [NormedSpace ℝ F] (V : M → Type*)
+    [∀ x, AddCommGroup (V x)] [∀ x, Module ℝ (V x)] [∀ x, TopologicalSpace (V x)]
+    [TopologicalSpace (TotalSpace F V)] [FiberBundle F V] [VectorBundle ℝ F V]
+    [∀ x, IsTopologicalAddGroup (V x)] [∀ x, ContinuousSMul ℝ (V x)]
+    [IsManifold I 1 M] (k : ℕ) : Submodule ℝ (RoughBundleForm I M V k) :=
+  sorry
+
+theorem mem_smoothBundleForms [IsManifold I 1 M] {φ : RoughBundleForm I M V k} :
+    φ ∈ smoothBundleForms I F V k ↔ IsSmoothBundleForm I F V ∞ φ :=
+  sorry
+
+/-- **Layer 0.4.** `Ω^k(M; V)`, the module of smooth forms with arbitrary bundle values. -/
+abbrev SmoothBundleForm (I : ModelWithCorners ℝ E H) (F : Type*)
+    [NormedAddCommGroup F] [NormedSpace ℝ F] (V : M → Type*)
+    [∀ x, AddCommGroup (V x)] [∀ x, Module ℝ (V x)] [∀ x, TopologicalSpace (V x)]
+    [TopologicalSpace (TotalSpace F V)] [FiberBundle F V] [VectorBundle ℝ F V]
+    [∀ x, IsTopologicalAddGroup (V x)] [∀ x, ContinuousSMul ℝ (V x)]
+    [IsManifold I 1 M] (k : ℕ) : Type _ :=
+  ↥(smoothBundleForms I F V k)
+
+/-- **Layer 0.3.** A `C^(n+1)` map pulls a `C^n` bundle-valued form back to a `C^n`
+form with values in the pulled-back bundle. Bundling `f` supplies the canonical pullback
+bundle instances from its continuity. -/
+theorem isSmoothBundleForm_mpullback {n : WithTop ℕ∞}
+    [IsManifold I 1 M] [IsManifold I' 1 M']
+    [IsManifold I (n + 1) M] [IsManifold I' (n + 1) M']
+    {V' : M' → Type*} [∀ y, AddCommGroup (V' y)] [∀ y, Module ℝ (V' y)]
+    [∀ y, TopologicalSpace (V' y)] [TopologicalSpace (TotalSpace F V')]
+    [FiberBundle F V'] [VectorBundle ℝ F V']
+    [∀ y, IsTopologicalAddGroup (V' y)] [∀ y, ContinuousSMul ℝ (V' y)]
+    [ContMDiffVectorBundle n F V' I'] (f : ContMDiffMap I I' M M' (n + 1))
+    {φ : RoughBundleForm I' M' V' k} (hφ : IsSmoothBundleForm I' F V' n φ) :
+    IsSmoothBundleForm I F (f *ᵖ V') n (bundleMpullback I I' f φ) :=
+  sorry
+
+/-- **Layer 0.4, curvature typing gate.** Endomorphism-valued 2-forms are expressible
+without a global trivialization of `V`. A smooth connection supplies curvature as a member of
+this space; this abbreviation constructs only its carrier. General covariant exterior
+differentiation requires that connection and satisfies `(d_∇)^2 ω = R_∇ ∧ ω`, rather
+than the `d² = 0` law of Layer 1's fixed-coefficient exterior derivative. The Riemannian
+curvature construction remains owned by GeometricTopology. -/
+abbrev CurvatureForm (I : ModelWithCorners ℝ E H) (F : Type*)
+    [NormedAddCommGroup F] [NormedSpace ℝ F] (V : M → Type*)
+    [∀ x, AddCommGroup (V x)] [∀ x, Module ℝ (V x)] [∀ x, TopologicalSpace (V x)]
+    [TopologicalSpace (TotalSpace F V)] [FiberBundle F V] [VectorBundle ℝ F V]
+    [∀ x, IsTopologicalAddGroup (V x)] [∀ x, ContinuousSMul ℝ (V x)]
+    [IsManifold I 1 M] : Type _ :=
+  SmoothBundleForm I (F →L[ℝ] F) (fun x ↦ V x →L[ℝ] V x) 2
+
+section BundleWedge
+
+variable {V₁ V₂ V₃ : M → Type*}
+  [∀ x, AddCommGroup (V₁ x)] [∀ x, Module ℝ (V₁ x)] [∀ x, TopologicalSpace (V₁ x)]
+  [∀ x, IsTopologicalAddGroup (V₁ x)] [∀ x, ContinuousSMul ℝ (V₁ x)]
+  [∀ x, AddCommGroup (V₂ x)] [∀ x, Module ℝ (V₂ x)] [∀ x, TopologicalSpace (V₂ x)]
+  [∀ x, IsTopologicalAddGroup (V₂ x)] [∀ x, ContinuousSMul ℝ (V₂ x)]
+  [∀ x, AddCommGroup (V₃ x)] [∀ x, Module ℝ (V₃ x)] [∀ x, TopologicalSpace (V₃ x)]
+  [∀ x, IsTopologicalAddGroup (V₃ x)] [∀ x, ContinuousSMul ℝ (V₃ x)]
+  {l : ℕ}
+
+/-- **Layer 0.3.** The paired wedge for arbitrary value bundles, through a fibrewise
+continuous bilinear map. Joint continuity is explicit because the carrier allows arbitrary
+topological fibres; no fibre norms or connection are required. The next equation pins the
+determinant normalization and determines all evaluations. -/
+noncomputable def bundleWedgeWith (μ : (x : M) → V₁ x →L[ℝ] V₂ x →L[ℝ] V₃ x)
+    (hμ : ∀ x, Continuous (fun p : V₁ x × V₂ x ↦ μ x p.1 p.2))
+    (φ : RoughBundleForm I M V₁ k) (ψ : RoughBundleForm I M V₂ l) :
+    RoughBundleForm I M V₃ (k + l) :=
+  sorry
+
+theorem bundleWedgeWith_apply (μ : (x : M) → V₁ x →L[ℝ] V₂ x →L[ℝ] V₃ x)
+    (hμ : ∀ x, Continuous (fun p : V₁ x × V₂ x ↦ μ x p.1 p.2))
+    (φ : RoughBundleForm I M V₁ k) (ψ : RoughBundleForm I M V₂ l) (x : M)
+    (v : Fin (k + l) → TangentSpace I x) :
+    bundleWedgeWith μ hμ φ ψ x v =
+      (((k.factorial : ℝ) * (l.factorial : ℝ))⁻¹) •
+        ∑ σ : Equiv.Perm (Fin (k + l)), Equiv.Perm.sign σ •
+          μ x (φ x (fun i ↦ v (σ (Fin.castAdd l i))))
+            (ψ x (fun i ↦ v (σ (Fin.natAdd k i)))) :=
+  sorry
+
+/-- **Layer 0.3.** Pullback of a paired wedge pulls back the pairing as well as both
+value bundles; this is pointwise algebra and has no differentiability hypothesis. -/
+theorem bundleMpullback_wedgeWith (f : M' → M)
+    (μ : (x : M) → V₁ x →L[ℝ] V₂ x →L[ℝ] V₃ x)
+    (hμ : ∀ x, Continuous (fun p : V₁ x × V₂ x ↦ μ x p.1 p.2))
+    (φ : RoughBundleForm I M V₁ k) (ψ : RoughBundleForm I M V₂ l) :
+    bundleMpullback I' I f (bundleWedgeWith μ hμ φ ψ) =
+      bundleWedgeWith (I := I') (fun y ↦ μ (f y)) (fun y ↦ hμ (f y))
+        (bundleMpullback I' I f φ) (bundleMpullback I' I f ψ) :=
+  sorry
+
+end BundleWedge
+
+end BundleForms
+
 section Forms
 
 variable {E H M : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [TopologicalSpace H]
@@ -259,27 +490,25 @@ variable {E H M : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [Topological
   {I'' : ModelWithCorners ℝ E'' H''} [TopologicalSpace M''] [ChartedSpace H'' M'']
   {F : Type*} [NormedAddCommGroup F] [NormedSpace ℝ F] {n : WithTop ℕ∞} {k l : ℕ}
 
-/-- **Layer 0.3.** Rough `F`-valued `k`-forms: unbundled sections of the alternating bundle,
-with no regularity. The value at `x` is a continuous alternating map on `TangentSpace I x`. -/
+/-- **Layer 0.3.** Fixed-coefficient forms are the trivial-bundle specialization of
+`RoughBundleForm`. Layer 1's ordinary exterior derivative acts on this specialization. -/
 abbrev RoughForm (I : ModelWithCorners ℝ E H) (M : Type*) [TopologicalSpace M]
     [ChartedSpace H M] (F : Type*) [NormedAddCommGroup F] [NormedSpace ℝ F] (k : ℕ) :
     Type _ :=
-  (x : M) → TangentSpace I x [⋀^Fin k]→L[ℝ] F
+  RoughBundleForm I M (Trivial M F) k
 
 variable (I) in
 /-- **Layer 0.3.** The `C^n` predicate on a rough form: `C^n` as a section of the topological
 alternating bundle `fun x ↦ TangentSpace I x [⋀^Fin k]→L[ℝ] Trivial M F x` of
 `Mathlib/Topology/VectorBundle/ContinuousAlternatingMap.lean`. -/
 def IsSmoothForm [IsManifold I 1 M] (n : WithTop ℕ∞) (φ : RoughForm I M F k) : Prop :=
-  ContMDiff I (I.prod 𝓘(ℝ, E [⋀^Fin k]→L[ℝ] F)) n
-    (fun x ↦ TotalSpace.mk' (E [⋀^Fin k]→L[ℝ] F)
-      (E := fun x ↦ TangentSpace I x [⋀^Fin k]→L[ℝ] Trivial M F x) x (φ x))
+  IsSmoothBundleForm I F (Trivial M F) n φ
 
 /-- **Layer 0.3.** The pullback of a rough form, total and junk-valued in the style of
 `VectorField.mpullback`: `mpullback f φ x = (φ (f x)) ∘ mfderiv I I' f x`. -/
 noncomputable def mpullback (I : ModelWithCorners ℝ E H) (I' : ModelWithCorners ℝ E' H')
     (f : M → M') (φ : RoughForm I' M' F k) : RoughForm I M F k :=
-  fun x ↦ (φ (f x)).compContinuousLinearMap (mfderiv I I' f x)
+  bundleMpullback I I' f φ
 
 theorem mpullback_apply (f : M → M') (φ : RoughForm I' M' F k) (x : M)
     (v : Fin k → TangentSpace I x) :
@@ -329,16 +558,57 @@ theorem isSmoothForm_mpullback_infty [IsManifold I 1 M] [IsManifold I' 1 M'] [Is
     (hφ : IsSmoothForm I' ∞ φ) : IsSmoothForm I ∞ (mpullback I I' f φ) :=
   sorry
 
-/-- **Layer 0.3.** The pointwise wedge of ℝ-valued rough forms. -/
+/-- **Layer 0.3.** The pointwise paired wedge of fixed-coefficient rough forms. The pairing
+is constant on the base; a varying bundle pairing belongs to the bundle-valued API. -/
+noncomputable def RoughForm.wedgeWith
+    {F₁ F₂ F₃ : Type*} [NormedAddCommGroup F₁] [NormedSpace ℝ F₁]
+    [NormedAddCommGroup F₂] [NormedSpace ℝ F₂] [NormedAddCommGroup F₃] [NormedSpace ℝ F₃]
+    (μ : F₁ →L[ℝ] F₂ →L[ℝ] F₃) (φ : RoughForm I M F₁ k) (η : RoughForm I M F₂ l) :
+    RoughForm I M F₃ (k + l) :=
+  fun x ↦ TauCetiRoadmap.DifferentialGeometry.wedgeWith (E := E) μ (φ x) (η x)
+
+/-- **Layer 0.3.** The bundle-valued product specializes to the fixed-coefficient product.
+The continuity witness is automatic for a continuous bilinear map between normed spaces. -/
+theorem bundleWedgeWith_trivial
+    {F₁ F₂ F₃ : Type*} [NormedAddCommGroup F₁] [NormedSpace ℝ F₁]
+    [NormedAddCommGroup F₂] [NormedSpace ℝ F₂] [NormedAddCommGroup F₃] [NormedSpace ℝ F₃]
+    (μ : F₁ →L[ℝ] F₂ →L[ℝ] F₃)
+    (hμ : ∀ _ : M, Continuous (fun p : F₁ × F₂ ↦ μ p.1 p.2))
+    (φ : RoughForm I M F₁ k) (η : RoughForm I M F₂ l) :
+    bundleWedgeWith (fun _ ↦ μ) hμ φ η = RoughForm.wedgeWith μ φ η := by
+  funext x
+  apply ContinuousAlternatingMap.ext
+  intro v
+  change bundleWedgeWith (fun _ ↦ μ) hμ φ η x v =
+    TauCetiRoadmap.DifferentialGeometry.wedgeWith (E := E) μ (φ x) (η x) v
+  rw [bundleWedgeWith_apply]
+  exact (wedgeWith_apply (E := E) (μ := μ) (φ x) (η x) v).symm
+
+/-- **Layer 0.3.** The pointwise wedge of ℝ-valued rough forms, the multiplication
+specialization of `RoughForm.wedgeWith`. -/
 noncomputable def RoughForm.wedge (φ : RoughForm I M ℝ k) (η : RoughForm I M ℝ l) :
     RoughForm I M ℝ (k + l) :=
-  fun x ↦ TauCetiRoadmap.DifferentialGeometry.wedge (E := E) (φ x) (η x)
+  RoughForm.wedgeWith (ContinuousLinearMap.mul ℝ ℝ) φ η
+
+/-- **Layer 0.3.** Pullback commutes with every fixed continuous bilinear pairing,
+including multiplication and a Lie bracket. No differentiability is needed: this is the
+pointwise algebraic identity for `compContinuousLinearMap`, even at junk derivatives. -/
+theorem mpullback_wedgeWith
+    {F₁ F₂ F₃ : Type*} [NormedAddCommGroup F₁] [NormedSpace ℝ F₁]
+    [NormedAddCommGroup F₂] [NormedSpace ℝ F₂] [NormedAddCommGroup F₃] [NormedSpace ℝ F₃]
+    (μ : F₁ →L[ℝ] F₂ →L[ℝ] F₃) (f : M → M')
+    (φ : RoughForm I' M' F₁ k) (η : RoughForm I' M' F₂ l) :
+    mpullback I I' f (RoughForm.wedgeWith μ φ η) =
+      RoughForm.wedgeWith μ (mpullback I I' f φ) (mpullback I I' f η) := by
+  funext x
+  exact (wedgeWith_compContinuousLinearMap (E := E') (E' := E)
+    (mfderiv I I' f x) (φ (f x)) (η (f x))).symm
 
 /-- **Layer 0.3.** Pullback is a wedge homomorphism, unconditionally (it is pointwise algebra,
 `wedgeWith_compContinuousLinearMap`). -/
 theorem mpullback_wedge (f : M → M') (φ : RoughForm I' M' ℝ k) (η : RoughForm I' M' ℝ l) :
     mpullback I I' f (φ.wedge η) = (mpullback I I' f φ).wedge (mpullback I I' f η) :=
-  sorry
+  mpullback_wedgeWith (ContinuousLinearMap.mul ℝ ℝ) f φ η
 
 /-- **Layer 0.3.** The support of a form, closed by convention. -/
 def RoughForm.tsupport (φ : RoughForm I M F k) : Set M :=
@@ -366,11 +636,11 @@ under the module operations is the content of the target. -/
 def smoothForms (I : ModelWithCorners ℝ E H) (M : Type*) [TopologicalSpace M] [ChartedSpace H M]
     [IsManifold I 1 M] (F : Type*) [NormedAddCommGroup F] [NormedSpace ℝ F] (k : ℕ) :
     Submodule ℝ (RoughForm I M F k) :=
-  sorry
+  smoothBundleForms I F (Trivial M F) k
 
 theorem mem_smoothForms [IsManifold I 1 M] {φ : RoughForm I M F k} :
     φ ∈ smoothForms I M F k ↔ IsSmoothForm I ∞ φ :=
-  sorry
+  mem_smoothBundleForms
 
 /-- **Layer 0.4.** `Ω^k⟮I, M; F⟯`, the module of smooth `F`-valued `k`-forms. -/
 abbrev SmoothForm (I : ModelWithCorners ℝ E H) (M : Type*) [TopologicalSpace M]
@@ -378,11 +648,20 @@ abbrev SmoothForm (I : ModelWithCorners ℝ E H) (M : Type*) [TopologicalSpace M
     (k : ℕ) : Type _ :=
   ↥(smoothForms I M F k)
 
-/-- **Layer 0.4.** The wedge of smooth forms is smooth; this is where 0.2's smooth bundle
-structure is used. -/
+/-- **Layer 0.4.** The paired wedge of smooth fixed-coefficient forms is smooth for every
+continuous bilinear pairing. This is where 0.2's smooth bundle structure is used. -/
+theorem smoothForms_wedgeWith_mem [IsManifold I 1 M] [IsManifold I ∞ M]
+    {F₁ F₂ F₃ : Type*} [NormedAddCommGroup F₁] [NormedSpace ℝ F₁]
+    [NormedAddCommGroup F₂] [NormedSpace ℝ F₂] [NormedAddCommGroup F₃] [NormedSpace ℝ F₃]
+    (μ : F₁ →L[ℝ] F₂ →L[ℝ] F₃) (φ : SmoothForm I M F₁ k) (η : SmoothForm I M F₂ l) :
+    RoughForm.wedgeWith μ (φ : RoughForm I M F₁ k) (η : RoughForm I M F₂ l) ∈
+      smoothForms I M F₃ (k + l) :=
+  sorry
+
+/-- **Layer 0.4.** Smoothness of the scalar wedge, specialized from the paired wedge. -/
 theorem smoothForms_wedge_mem [IsManifold I 1 M] [IsManifold I ∞ M] (φ : SmoothForm I M ℝ k)
     (η : SmoothForm I M ℝ l) : (φ : RoughForm I M ℝ k).wedge η ∈ smoothForms I M ℝ (k + l) :=
-  sorry
+  smoothForms_wedgeWith_mem (ContinuousLinearMap.mul ℝ ℝ) φ η
 
 /-- **Layer 0.4, the bridge to Tau Ceti's symplectic lane.** A smooth 2-form in the sense of
 this roadmap is a `TauCeti.SmoothTwoForm`, and conversely; the two notions are identified by
@@ -488,7 +767,24 @@ theorem isSmoothForm_mextDeriv_infty [IsManifold I 1 M] [IsManifold I ∞ M] {φ
     (hφ : IsSmoothForm I ∞ φ) : IsSmoothForm I ∞ (mextDeriv φ) :=
   sorry
 
-/-- **Layer 1.4, the Leibniz rule with unit constants**, the degrees cast by `Fin.cast`. -/
+/-- **Layer 1.4.** The vector-valued Leibniz rule for a fixed continuous bilinear pairing,
+with the determinant convention's unit constants. This includes a Lie bracket, so it applies
+to `dω + ½[ω ∧ ω]`. A base-dependent pairing would contribute its own derivative; arbitrary
+bundle coefficients instead require connections and a compatible (parallel) pairing. -/
+theorem mextDeriv_wedgeWith [IsManifold I 1 M]
+    {F₁ F₂ F₃ : Type*} [NormedAddCommGroup F₁] [NormedSpace ℝ F₁]
+    [NormedAddCommGroup F₂] [NormedSpace ℝ F₂] [NormedAddCommGroup F₃] [NormedSpace ℝ F₃]
+    (μ : F₁ →L[ℝ] F₂ →L[ℝ] F₃) {φ : RoughForm I M F₁ k} {η : RoughForm I M F₂ l}
+    (hφ : IsSmoothForm I 1 φ) (hη : IsSmoothForm I 1 η) (x : M)
+    (v : Fin (k + l + 1) → TangentSpace I x) :
+    mextDeriv (RoughForm.wedgeWith μ φ η) x v =
+      RoughForm.wedgeWith μ (mextDeriv φ) η x
+        (v ∘ Fin.cast (show k + 1 + l = k + l + 1 by omega)) +
+        (-1 : ℝ) ^ k • RoughForm.wedgeWith μ φ (mextDeriv η) x
+          (v ∘ Fin.cast (show k + (l + 1) = k + l + 1 by omega)) :=
+  sorry
+
+/-- **Layer 1.4.** The scalar Leibniz rule, specialized from `mextDeriv_wedgeWith`. -/
 theorem mextDeriv_wedge [IsManifold I 1 M] {φ : RoughForm I M ℝ k} {η : RoughForm I M ℝ l}
     (hφ : IsSmoothForm I 1 φ) (hη : IsSmoothForm I 1 η) (x : M)
     (v : Fin (k + l + 1) → TangentSpace I x) :
@@ -496,7 +792,7 @@ theorem mextDeriv_wedge [IsManifold I 1 M] {φ : RoughForm I M ℝ k} {η : Roug
       (mextDeriv φ).wedge η x (v ∘ Fin.cast (show k + 1 + l = k + l + 1 by omega)) +
         (-1 : ℝ) ^ k • φ.wedge (mextDeriv η) x
           (v ∘ Fin.cast (show k + (l + 1) = k + l + 1 by omega)) :=
-  sorry
+  mextDeriv_wedgeWith (ContinuousLinearMap.mul ℝ ℝ) hφ hη x v
 
 /-- **Layer 1.4, the invariant formula for 1-forms** [Lee, Prop. 14.29]:
 `dφ(V, W) = V(φ(W)) − W(φ(V)) − φ([V, W])`. -/
