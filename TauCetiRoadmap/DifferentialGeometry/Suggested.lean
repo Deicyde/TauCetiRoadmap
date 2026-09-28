@@ -28,7 +28,7 @@ import TauCeti.Geometry.Manifold.Boundary.Charts
 import TauCeti.Geometry.Manifold.IntegralCurve.Maximal
 import TauCeti.Geometry.Manifold.LocalDiffeomorph
 import TauCeti.Geometry.Manifold.LocallyFlat.Basic
-import TauCeti.Geometry.Manifold.TwoForm
+import TauCeti.Geometry.Manifold.TwoForm.Closed
 import TauCeti.Geometry.Manifold.VectorBundle.CovariantDerivative.LeviCivita.Regularity
 import TauCeti.Geometry.Manifold.VectorBundle.Riemannian.Riesz
 
@@ -49,17 +49,19 @@ wherever the pin allows (`mpullback`, `flowDomain`, `degreeAtRegularValue`, `mgr
 `laplaceBeltrami`, …), so that the statements about them mean exactly what they say.
 
 Existing Tau Ceti declarations are imported and consumed rather than restated: the
-boundary manifold (`TauCeti.isManifold_boundary`), the manifold inverse function theorem
-(`TauCeti.isLocalDiffeomorphAt_of_mfderiv_eq`), the maximal integral curve
+boundary manifold (`TauCeti.isManifold_boundary`), the manifold inverse function theorem at
+interior points (`TauCeti.isLocalDiffeomorphAt_of_mfderiv_eq`, which discharges layer 10.1's
+boundaryless form in place), the maximal integral curve
 (`maximalIntegralCurve`, whose compact-manifold completeness discharges a former target of
 this file in place), finite-dimensional smooth dependence of flows
 (`ODE.exists_contDiffAt_localFlow`), flat Sard (`Differentiable.dense_compl_image_criticalPoints`),
-the Riesz duality of a Riemannian bundle (`Riemannian.Tensor.rieszDual`), the Levi-Civita
-connection (`CovariantDerivative.leviCivita`), slice charts (`TauCeti.IsSliceChart`),
-and the invariant integral curves of a Lie group
+the Riesz duality of a Riemannian bundle (`Riemannian.Tensor.rieszDual`), the `C^∞` regularity
+of Mathlib's Levi-Civita connection `CovariantDerivative.leviCivitaConnection`, slice charts
+(`TauCeti.IsSliceChart`), and the invariant integral curves of a Lie group
 (`mulInvariantIntegralCurve`).
 
-The existing `TauCeti.SmoothTwoForm` is imported only to state layer 0.4's migration check
+The existing `TauCeti.SmoothTwoForm`, with its chartwise closedness predicate
+`TauCeti.SmoothTwoForm.IsClosed`, is imported only to state layer 0.4's migration checks
 against the pinned dependency. Its implementation and consumers must be refactored onto
 `SmoothForm I M ℝ 2`; any retained old name abbreviates that generic carrier.
 
@@ -669,14 +671,15 @@ theorem smoothForms_wedge_mem [IsManifold I 1 M] [IsManifold I ∞ M] (φ : Smoo
 
 /-- **Layer 0.4, migration of Tau Ceti's existing two-form code.** This linear equivalence checks
 that the pinned old representation migrates to the generic carrier preserving algebra and evaluation.
-Completing the layer requires refactoring `Geometry/Manifold/TwoForm.lean` and its consumers
-onto `SmoothForm I M ℝ 2`, retaining `SmoothTwoForm` only as an abbreviation if needed.
-The old independent structure is removed; this comparison with the pinned dependency is
+Completing the layer requires refactoring `Geometry/Manifold/TwoForm/{Basic,Closed}.lean` and
+its consumers onto `SmoothForm I M ℝ 2`, retaining `SmoothTwoForm` only as an abbreviation if
+needed. The old independent structure is removed; this comparison with the pinned dependency is
 a migration check, not a permanent pair of form types. The bilinear-form view, smooth
 evaluation and constant-form API are derived from the generic API, preserving the symplectic
 consumers' evaluation and energy identities. Callers use tuple evaluation or a named two-vector
-adapter, reusing the generic coercion and algebra instances. Closedness is defined through
-`mextDeriv`. -/
+adapter, reusing the generic coercion and algebra instances. Closedness becomes
+`mextDeriv φ = 0`, which agrees with the pinned chartwise predicate by
+`legacySmoothTwoFormEquiv_isClosed_iff`. -/
 noncomputable def legacySmoothTwoFormEquiv [IsManifold I 1 M] [IsManifold I ∞ M] :
     TauCeti.SmoothTwoForm I M ≃ₗ[ℝ] SmoothForm I M ℝ 2 :=
   sorry
@@ -830,6 +833,14 @@ theorem mlieDerivForm_eq_interior_mextDeriv_add [IsManifold I 1 M] [IsManifold I
     (hV : ContMDiff I I.tangent 1 (fun x ↦ (⟨x, V x⟩ : TangentBundle I M)))
     {φ : RoughForm I M F (k + 1)} (hφ : IsSmoothForm I 1 φ) :
     mlieDerivForm V φ = (mextDeriv φ).interior V + mextDeriv (φ.interior V) :=
+  sorry
+
+/-- **Layer 0.4, migration of closedness.** The pinned predicate `TauCeti.SmoothTwoForm.IsClosed`
+asks every chart expression of the form to have vanishing `extDerivWithin` on `range I`; after
+the migration it is the vanishing of `mextDeriv`, and the chartwise description is a theorem. -/
+theorem legacySmoothTwoFormEquiv_isClosed_iff [IsManifold I 1 M] [IsManifold I ∞ M]
+    (φ : TauCeti.SmoothTwoForm I M) :
+    mextDeriv (legacySmoothTwoFormEquiv φ : RoughForm I M ℝ 2) = 0 ↔ φ.IsClosed :=
   sorry
 
 end ExtDeriv
@@ -2673,25 +2684,17 @@ variable {E H : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [TopologicalSp
   {n : WithTop ℕ∞}
 
 /-- **Layer 10.1, consumed.** The manifold inverse function theorem is Tau Ceti's
-`TauCeti.isLocalDiffeomorphAt_of_mfderiv_eq`, for boundaryless *model spaces*; this restatement
-checks the import. -/
-theorem isLocalDiffeomorphAt_of_mfderiv_eq_of_boundaryless [CompleteSpace E] [I.Boundaryless]
-    [J.Boundaryless] [IsManifold I n M] [IsManifold J n N] {f : M → N} {s : Set M} {x : M}
-    (hf : ContMDiffOn I J n f s) (hs : IsOpen s) (hx : x ∈ s) (hn : 1 ≤ n)
-    {e : TangentSpace I x ≃L[ℝ] TangentSpace J (f x)}
-    (he : (e : TangentSpace I x →L[ℝ] TangentSpace J (f x)) = mfderiv I J f x) :
-    IsLocalDiffeomorphAt I J n f x :=
-  TauCeti.isLocalDiffeomorphAt_of_mfderiv_eq hf hs hx hn he
-
-/-- **Layer 10.1, the one-hypothesis extension** owned jointly with Hopf–Rinow in that same file:
-from boundaryless model spaces to boundaryless *manifolds* over arbitrary models. -/
+`TauCeti.isLocalDiffeomorphAt_of_mfderiv_eq`, stated at interior points of manifolds over
+arbitrary models (with the global form `TauCeti.isLocalDiffeomorph_of_mfderiv_eq`). On a
+boundaryless manifold every point is interior (`BoundarylessManifold.isInteriorPoint`), so the
+form the degree theory uses is discharged in place; this checks the import. -/
 theorem isLocalDiffeomorphAt_of_mfderiv_eq_of_boundarylessManifold [CompleteSpace E]
-    [BoundarylessManifold I M] [BoundarylessManifold J N] [IsManifold I n M] [IsManifold J n N]
+    [BoundarylessManifold I M] [IsManifold I n M] [IsManifold J n N]
     {f : M → N} {s : Set M} {x : M} (hf : ContMDiffOn I J n f s) (hs : IsOpen s) (hx : x ∈ s)
     (hn : 1 ≤ n) {e : TangentSpace I x ≃L[ℝ] TangentSpace J (f x)}
     (he : (e : TangentSpace I x →L[ℝ] TangentSpace J (f x)) = mfderiv I J f x) :
     IsLocalDiffeomorphAt I J n f x :=
-  sorry
+  TauCeti.isLocalDiffeomorphAt_of_mfderiv_eq hf hs hx BoundarylessManifold.isInteriorPoint hn he
 
 variable (I J) in
 /-- **Layer 10.1.** Regular points and regular values. -/
@@ -2929,22 +2932,24 @@ theorem mgradient_eq_gradient {F : Type*} [NormedAddCommGroup F] [InnerProductSp
 
 variable [IsManifold I 2 M] [IsContMDiffRiemannianBundle I 1 E (fun x : M ↦ TangentSpace I x)]
 
-/-- **Layer 12.3.** Divergence as the pointwise trace of the covariant derivative — for Tau Ceti's
-Levi-Civita connection `CovariantDerivative.leviCivita`, consumed together with its regularity
-(`CovariantDerivative.instContMDiffCovariantDerivativeLeviCivita`); the fundamental theorem of
-Riemannian geometry itself is the Hopf–Rinow roadmap's and is already in Tau Ceti. -/
+/-- **Layer 12.3.** Divergence as the pointwise trace of the covariant derivative — for Mathlib's
+Levi-Civita connection `CovariantDerivative.leviCivitaConnection`, consumed together with Tau
+Ceti's regularity instance
+(`CovariantDerivative.instContMDiffCovariantDerivativeLeviCivitaConnection`); the fundamental
+theorem of Riemannian geometry is not rebuilt here. -/
 noncomputable def divergence (I : ModelWithCorners ℝ E H) {M : Type*} [TopologicalSpace M]
     [ChartedSpace H M] [RiemannianBundle (fun x : M ↦ TangentSpace I x)] [IsManifold I 2 M]
     [IsContMDiffRiemannianBundle I 1 E (fun x : M ↦ TangentSpace I x)]
     (X : (x : M) → TangentSpace I x) (x : M) : ℝ :=
-  LinearMap.trace ℝ (TangentSpace I x) (CovariantDerivative.leviCivita I M X x).toLinearMap
+  LinearMap.trace ℝ (TangentSpace I x)
+    (CovariantDerivative.leviCivitaConnection I M X x).toLinearMap
 
 /-- **Layer 12.3.** The Hessian `Hess f (v, w) = ⟪∇_v grad f, w⟫`. -/
 noncomputable def hessian (I : ModelWithCorners ℝ E H) {M : Type*} [TopologicalSpace M]
     [ChartedSpace H M] [RiemannianBundle (fun x : M ↦ TangentSpace I x)] [IsManifold I 2 M]
     [IsContMDiffRiemannianBundle I 1 E (fun x : M ↦ TangentSpace I x)]
     (f : M → ℝ) (x : M) (v w : TangentSpace I x) : ℝ :=
-  ⟪CovariantDerivative.leviCivita I M (mgradient I f) x v, w⟫_ℝ
+  ⟪CovariantDerivative.leviCivitaConnection I M (mgradient I f) x v, w⟫_ℝ
 
 /-- Symmetry of the Hessian, from torsion-freeness. -/
 theorem hessian_symm [IsManifold I ∞ M] [IsContMDiffRiemannianBundle I ∞ E (fun x : M ↦ TangentSpace I x)]

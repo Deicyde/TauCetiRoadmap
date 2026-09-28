@@ -126,8 +126,9 @@ Checked against the pin; re-grep before citing anything in code.
   singular cohomology, relative theory, excision, chain-level subdivision, Mayer–Vietoris, the cup
   product.
 - **Riemannian substrate**: `RiemannianBundle`, `ContMDiffRiemannianMetric`, `IsRiemannianManifold`,
-  `CovariantDerivative` with `torsion` and `IsMetricCompatible`, `InnerProductSpace.instLaplacian`
-  and the `Δ` notation class, `Analysis/Calculus/Gradient/`.
+  `CovariantDerivative` with `torsion` and `IsMetricCompatible`, the Levi-Civita connection
+  `CovariantDerivative.leviCivitaConnection` (metric-compatible and torsion-free),
+  `InnerProductSpace.instLaplacian` and the `Δ` notation class, `Analysis/Calculus/Gradient/`.
 
 ## What Tau Ceti already has (consume)
 
@@ -140,8 +141,9 @@ Each item is imported by `Suggested.lean` and used in a compiled statement there
   a `C^k` manifold over `𝓡∂ (n+1)` is a `C^k` manifold over `EuclideanSpace ℝ (Fin n)`) with the
   inclusion a closed smooth embedding; corners out of scope there.
 - **The manifold inverse function theorem** (Hopf–Rinow roadmap):
-  `Geometry/Manifold/LocalDiffeomorph.lean`, `TauCeti.isLocalDiffeomorphAt_of_mfderiv_eq`, for
-  boundaryless model spaces.
+  `Geometry/Manifold/LocalDiffeomorph.lean`, `TauCeti.isLocalDiffeomorphAt_of_mfderiv_eq` at
+  interior points over any model, hence at every point of a boundaryless manifold, and the global
+  form `TauCeti.isLocalDiffeomorph_of_mfderiv_eq`.
 - **Maximal integral curves** (Hopf–Rinow roadmap):
   `Geometry/Manifold/IntegralCurve/{Extension,Maximal}.lean` — `maximalIntegralCurveInterval`,
   `maximalIntegralCurve`, the escape statements, completeness on compact manifolds; 3.2 defines the
@@ -149,9 +151,10 @@ Each item is imported by `Suggested.lean` and used in a compiled statement there
 - **Smooth dependence on initial conditions, finite-dimensional**:
   `Analysis/ODE/{SmoothParameter,InitialCondition}.lean` (`ODE.exists_contDiffAt_localFlow`); 3.1
   keeps only the Banach case.
-- **The Levi-Civita connection** (Hopf–Rinow roadmap):
-  `…/CovariantDerivative/LeviCivita/{Basic,Existence,Regularity}.lean`
-  (`CovariantDerivative.leviCivita`, uniqueness, `C^∞` regularity as an instance),
+- **The Levi-Civita connection** (Hopf–Rinow roadmap): on Mathlib's `leviCivitaConnection`,
+  `…/CovariantDerivative/LeviCivita/{Basic,Regularity}.lean` (uniqueness through the Koszul
+  formula, `C^∞` regularity as the instance
+  `CovariantDerivative.instContMDiffCovariantDerivativeLeviCivitaConnection`),
   `…/Riemannian/Riesz.lean` (`Riemannian.Tensor.rieszDual`), `…/Riemannian/Geodesic/`. Layer 12
   builds on top.
 - **Flows on Lie groups** (Lie-groups roadmap): `Geometry/Lie/{IntegralCurve,Exponential/*}.lean`
@@ -163,13 +166,15 @@ Each item is imported by `Suggested.lean` and used in a compiled statement there
 
 ## Existing code to refactor
 
-**Smooth 2-forms**, currently defined separately in `Geometry/Manifold/TwoForm.lean` as
-`TauCeti.SmoothTwoForm`, migrate to the generic `SmoothForm I M ℝ 2` in layer 0.4. Refactor the
-existing implementation, its API and its symplectic consumers onto that carrier. Any retained
-`SmoothTwoForm` name is an abbreviation for the generic type, with compatibility operations
-derived from the generic API. The current definition is imported in `Suggested.lean` only to
-state the migration's preservation law against the pinned dependency. Closedness, absent from
-the current implementation, is supplied by layer 1's `mextDeriv`.
+**Smooth 2-forms**, currently defined separately in `Geometry/Manifold/TwoForm/Basic.lean` as
+`TauCeti.SmoothTwoForm`, with closedness `TauCeti.SmoothTwoForm.IsClosed` defined chartwise in
+`TwoForm/Closed.lean` and symplectic forms (`IsSymplectic`) built on both, migrate to the generic
+`SmoothForm I M ℝ 2` in layer 0.4. Refactor the existing implementation, its API and its
+symplectic consumers onto that carrier. Any retained `SmoothTwoForm` name is an abbreviation for
+the generic type, with compatibility operations derived from the generic API. Closedness becomes
+layer 1's `mextDeriv φ = 0`, with the chartwise description a theorem about it. The current
+definitions are imported in `Suggested.lean` only to state the migration's preservation laws
+against the pinned dependency.
 
 ## What is missing (build here)
 
@@ -239,12 +244,13 @@ Names in backticks are the declarations of `Suggested.lean`, which carries the e
   abbreviation if needed. The existing bilinear evaluation, algebraic bilinear-form view,
   smooth evaluation and constant-form API must follow from the generic API, reusing its algebra
   instances. Callers use tuple evaluation or a named two-vector adapter, without a competing
-  coercion on degree-two forms. The linear equivalence `legacySmoothTwoFormEquiv` and its
-  evaluation law compare with the pinned old definition as a migration check. *Acceptance:*
+  coercion on degree-two forms. The linear equivalence `legacySmoothTwoFormEquiv`, its
+  evaluation law and `legacySmoothTwoFormEquiv_isClosed_iff` (the pinned chartwise closedness is
+  `mextDeriv = 0`) compare with the pinned old definitions as a migration check. *Acceptance:*
   the old independent carrier is removed; `Geometry/Symplectic/Manifold/{TwoForm,Energy}.lean`
-  compiles on the generic carrier with nondegeneracy, tameness, compatibility, constant-form
-  normalization and energy identities preserved; and over `𝓘(ℝ, E)`, `mpullback` is the flat
-  pullback (`mpullback_eq_flat`).
+  compiles on the generic carrier with closedness, nondegeneracy, the symplectic predicate,
+  tameness, compatibility, constant-form normalization and energy identities preserved; and over
+  `𝓘(ℝ, E)`, `mpullback` is the flat pullback (`mpullback_eq_flat`).
 
 ### Layer 1: the exterior derivative
 
@@ -463,9 +469,9 @@ the sheaf route, which the pin cannot support.*
 
 *[Lee, Ch. 17, "Degree Theory"].*
 
-- **10.1** Consume Tau Ceti's inverse function theorem and own its extension to
-  `[BoundarylessManifold I M]` (`isLocalDiffeomorphAt_of_mfderiv_eq_of_boundarylessManifold`);
-  `IsRegularPoint`, `IsRegularValue`.
+- **10.1** Consume Tau Ceti's inverse function theorem, whose interior-point hypothesis holds on
+  boundaryless `M` (`isLocalDiffeomorphAt_of_mfderiv_eq_of_boundarylessManifold`, discharged in
+  place); `IsRegularPoint`, `IsRegularValue`.
 - **10.2 Sard.** `IsNullSet` through charts, `isNullSet_image_criticalPoints` and
   `dense_isRegularValue` from Tau Ceti's flat theorem [Lee, Thm. 6.10-style].
 - **10.3–10.4** Finite fibres over regular values, the real definition `degreeAtRegularValue` at a
@@ -493,15 +499,16 @@ the sheaf route, which the pin cannot support.*
 
 ### Layer 12: Riemannian metrics and the Laplace–Beltrami operator
 
-*[Lee, Ch. 13 and 16]. Over Tau Ceti's Levi-Civita connection and Riesz duality.*
+*[Lee, Ch. 13 and 16]. Over Mathlib's Levi-Civita connection, with Tau Ceti's regularity and
+Riesz duality.*
 
 - **12.1 Metrics.** Existence by partition of unity (`nonempty_contMDiffRiemannianMetric`)
   [Lee, Prop. 13.3]; pullback, product, `Opens` and boundary metrics; the round metric
   (`roundMetricCircle`).
 - **12.2 Gradient.** `mgradient` through `rieszDual`, with `inner_mgradient` (proved), the chain
   rule, smoothness, and `mgradient_eq_gradient` on the flat model.
-- **12.3 Divergence, Hessian, Laplacian.** `divergence` (the trace of `leviCivita X`), `hessian`
-  (symmetric), `laplaceBeltrami := divergence ∘ mgradient`, the trace of the Hessian
+- **12.3 Divergence, Hessian, Laplacian.** `divergence` (the trace of `leviCivitaConnection X`),
+  `hessian` (symmetric), `laplaceBeltrami := divergence ∘ mgradient`, the trace of the Hessian
   (`laplaceBeltrami_eq_sum_hessian`), in the `Δ` notation class.
 - **12.4 Volume form, density, measure.** `riemannianVolumeForm` [Lee, Prop. 15.29],
   `riemannianDensity`, and the Borel `riemannianMeasure`, locally finite, of full support, agreeing
@@ -561,10 +568,10 @@ One owner per shared construction, stated identically on both sides.
   hyperbolic structures, tubular and collar neighbourhoods, gluing, tautness, the Euler class, and
   everything 3-manifold-specific.
 - **Hopf–Rinow** owns the Levi-Civita connection, covariant differentiation along curves, geodesics
-  and their flow, the exponential map, Hopf–Rinow, and the model-boundaryless inverse function
-  theorem; layer 12 builds on the connection, 10.1 owns the boundaryless-manifold extension in the
-  same file, 3.2 consumes its maximal integral curves, and it consumes the general fundamental
-  theorem of flows for the geodesic flow.
+  and their flow, the exponential map, Hopf–Rinow, and the manifold inverse function theorem;
+  layer 12 builds on the connection, 10.1 consumes the inverse function theorem, 3.2 consumes its
+  maximal integral curves, and it consumes the general fundamental theorem of flows for the
+  geodesic flow.
 - **Lie groups** owns `lieExp`, one-parameter subgroups, `Ad`, the closed-subgroup and Lie-specific
   theorems, consuming layer 3's flows (reconciled in 3.3), layer 4's Frobenius and leaves, and 2.3's
   covers.

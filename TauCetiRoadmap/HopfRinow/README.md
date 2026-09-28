@@ -305,13 +305,12 @@ As each layer makes the next layer's *types* expressible in `TauCeti/`, state it
   `T_0(T_p M) ≃L[ℝ] T_p M` explicit using `NormedSpace.fromTangentSpace`, and prove that
   `mfderiv exp_p 0` is the identity under this identification. Record the corresponding strict
   derivative statement needed by the inverse-function theorem.
-- **The manifold inverse-function theorem:** the shared theorem of
-  `TauCeti/Geometry/Manifold/LocalDiffeomorph.lean`, owned here: for `C¹` manifolds over boundaryless
-  Banach model spaces, a `C¹` map whose `mfderiv` at a point is a continuous linear equivalence induces
-  a `LocalDiffeomorphAt` there (Mathlib's `Geometry/Manifold/LocalDiffeomorph.lean` lists this
-  implication as a TODO). Its one-hypothesis extension from boundaryless model spaces to boundaryless
-  manifolds over arbitrary models is the [differential-geometry roadmap](../DifferentialGeometry/README.md)'s
-  (its 10.1), placed in the same file. Apply the theorem to the preceding derivative theorem to
+- **The manifold inverse-function theorem:** add the missing shared theorem to
+  `TauCeti/Geometry/Manifold/LocalDiffeomorph.lean`: for `C¹` boundaryless Banach manifolds, a
+  `C¹` map whose `mfderiv` at a point is a continuous linear equivalence induces a
+  `LocalDiffeomorphAt` there. Mathlib's
+  `Geometry/Manifold/LocalDiffeomorph.lean` lists this implication as a TODO, so this roadmap owns
+  it as a prerequisite rather than consuming it. Apply it to the preceding derivative theorem to
   obtain that `exp_p` is a local diffeomorphism at `0`.
 - Milestone **(a) at `p`**, written `(a_p)`, is `expDomain p = univ`. Define pointwise geodesic
   completeness `(d_p)` by `∀ v, J(p,v) = univ`, and prove `(a_p) ↔ (d_p)` via domain-aware
