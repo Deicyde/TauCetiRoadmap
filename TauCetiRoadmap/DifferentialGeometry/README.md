@@ -10,13 +10,13 @@ theorem, no Riemannian Laplacian, no mapping degree.
 
 This roadmap asks for that theory, following [Lee] = John M. Lee, *Introduction to Smooth
 Manifolds*, 2nd ed., GTM 218 (cited with that edition's numbering; departures from its route are
-marked). The headline theorems are Stokes, the fundamental theorem of flows, Frobenius, the de Rham
-theorem, Poincaré duality, the equality of the two definitions of the mapping degree, the hairy ball
-theorem, and the Laplace–Beltrami operator; everything below them is reusable library, consumed by
-the geometric-topology, Heegaard Floer, Hopf–Rinow and Lie-groups roadmaps. Suggested homes, by
-Mathlib's layout:
-`TauCeti/Geometry/Manifold/{DifferentialForm,Orientation,Flow,Distribution,Integration,DeRham,Riemannian}/`,
-`TauCeti/AlgebraicTopology/SingularCohomology/`, and flat prerequisites under `TauCeti/Analysis/`.
+marked). The headline theorems are Stokes, the fundamental theorem of flows for Banach models,
+Frobenius, the de Rham theorem, Poincaré duality, the equality of the two definitions of the mapping
+degree, the hairy ball theorem, and the Laplace–Beltrami operator; everything below them is reusable
+library, consumed by the algebraic-topology, geometric-topology, Heegaard Floer and Lie-groups
+roadmaps. Suggested homes, by Mathlib's layout:
+`TauCeti/Geometry/Manifold/{DifferentialForm,Orientation,Flow,Distribution,Integration,DeRham,Riemannian}/`
+and flat prerequisites under `TauCeti/Analysis/`.
 
 ## Conventions
 
@@ -31,6 +31,9 @@ State each hypothesis where it is used; never bake it in.
   integration, Sard, degree, partitions of unity, 3.3's homogeneity, and all of layer 4. Layers 0–1
   and the rest of 3 stay Banach-general, like `extDeriv` and `IsMIntegralCurve`. Partitions of unity
   and smooth approximation also need `[T2Space M] [SigmaCompactSpace M]`, carried visibly.
+- **Completeness** of a coefficient space, `[CompleteSpace F]`, is written wherever forms are
+  integrated or primitives taken (5.4, 6.2, 8.4); the algebraic calculus of layers 0–1 keeps its
+  generality.
 - **Orientation** is chart-sign data (2.1), with fibers `Orientation ℝ (TangentSpace I x) ι` and an
   explicit `Fintype.card ι = finrank ℝ E`; the determinant criteria are theorems, not definitions.
 - **Wedge normalization**: for every pairing `μ`, `wedgeWith μ` is the sign-weighted sum over all
@@ -121,10 +124,9 @@ Checked against the pin; re-grep before citing anything in code.
 - **Homological algebra, complete**: `Algebra/Homology/` (`CochainComplex (ModuleCat ℝ) ℕ`,
   `Homotopy`, `ShortComplex.ShortExact.homology_exact₁/₂/₃`) and the four/five lemma; layers 6–9
   rebuild none of it.
-- **Singular homology, not cohomology**: `AlgebraicTopology/SingularHomology/`
-  (`singularChainComplexFunctor`, `singularHomologyFunctor`, `H₀`, homotopy invariance). Absent:
-  singular cohomology, relative theory, excision, chain-level subdivision, Mayer–Vietoris, the cup
-  product.
+- **Singular homology**: `AlgebraicTopology/SingularHomology/` (`singularChainComplexFunctor`,
+  `singularHomologyFunctor`, `H₀`, homotopy invariance); cohomology and the chain-level tools are
+  Tau Ceti's (below).
 - **Riemannian substrate**: `RiemannianBundle`, `ContMDiffRiemannianMetric`, `IsRiemannianManifold`,
   `CovariantDerivative` with `torsion` and `IsMetricCompatible`, the Levi-Civita connection
   `CovariantDerivative.leviCivitaConnection` (metric-compatible and torsion-free),
@@ -135,7 +137,8 @@ Checked against the pin; re-grep before citing anything in code.
 Each item is imported by `Suggested.lean` and used in a compiled statement there; none is rebuilt.
 
 - **Covering-space theory** (universal-covers roadmap): `TauCeti/AlgebraicTopology/UniversalCover/`
-  — universal cover, π₁-action, deck groups, the classification; 2.4 consumes the two-sheeted case.
+  — universal cover, π₁-action, deck groups, the classification, and `π₁(S¹) ≅ ℤ`
+  (`Circle.fundamentalGroupMulEquiv`); 2.4 consumes the two-sheeted case, 10.5 the circle.
 - **The boundary manifold** (geometric-topology roadmap):
   `Geometry/Manifold/Boundary/{Model,Charts}.lean` — `TauCeti.isManifold_boundary` (the boundary of
   a `C^k` manifold over `𝓡∂ (n+1)` is a `C^k` manifold over `EuclideanSpace ℝ (Fin n)`) with the
@@ -144,10 +147,13 @@ Each item is imported by `Suggested.lean` and used in a compiled statement there
   `Geometry/Manifold/LocalDiffeomorph.lean`, `TauCeti.isLocalDiffeomorphAt_of_mfderiv_eq` at
   interior points over any model, hence at every point of a boundaryless manifold, and the global
   form `TauCeti.isLocalDiffeomorph_of_mfderiv_eq`.
-- **Maximal integral curves** (Hopf–Rinow roadmap):
-  `Geometry/Manifold/IntegralCurve/{Extension,Maximal}.lean` — `maximalIntegralCurveInterval`,
-  `maximalIntegralCurve`, the escape statements, completeness on compact manifolds; 3.2 defines the
-  flow from them.
+- **Maximal integral curves and the maximal flow** (Hopf–Rinow roadmap):
+  `Geometry/Manifold/IntegralCurve/{Extension,Maximal,Flow}.lean` — `maximalIntegralCurveInterval`,
+  `maximalIntegralCurve`, the escape lemma `eventually_notMem_nhdsLT_maximalIntegralCurve`,
+  completeness on compact manifolds, and the fundamental theorem of flows for finite-dimensional
+  models: `maximalIntegralCurveFlowDomain`, its openness, joint smoothness of the flow, and the
+  group law `maximalIntegralCurve_add`. 3.2 reads them in `flowOf`'s order, discharges its
+  finite-dimensional targets from them, and extends them to Banach models.
 - **Smooth dependence on initial conditions, finite-dimensional**:
   `Analysis/ODE/{SmoothParameter,InitialCondition}.lean` (`ODE.exists_contDiffAt_localFlow`); 3.1
   keeps only the Banach case.
@@ -163,6 +169,17 @@ Each item is imported by `Suggested.lean` and used in a compiled statement there
   10.2 transfers it through charts.
 - **Slice charts and embeddings**: `Geometry/Manifold/{SmoothEmbedding,LocallyFlat}/`
   (`TauCeti.IsSliceChart`), `Geometry/Diffeomorphism/`.
+- **Singular chains and cohomology** (algebraic-topology roadmap, Stages 2, 3 and 6):
+  `AlgebraicTopology/Cohomology/{Basic,HomotopyInvariance,Relative}.lean` —
+  `TopCat.singularCochainComplex`, `TopCat.singularCohomology`, homotopy invariance,
+  `TopPair.singularCochainComplexShortComplex` and the long exact sequence of a pair — and
+  `AlgebraicTopology/Singular/Subdivision/` — `TauCeti.singularSubdivisionHomotopy`,
+  `TauCeti.smallSingularChainHomotopyEquiv` and the small-chain quasi-isomorphism. Layer 8
+  specializes them to real coefficients and builds on them.
+- **The Riemannian volume measure** (geometric-topology roadmap):
+  `Geometry/Manifold/Riemannian/VolumeDensity/` — `TauCeti.riemannianVolume`, glued from the chart
+  volumes with density `chartVolumeDensity`, orientation-free, characterized by
+  `eq_riemannianVolume_iff`, locally finite; 12.4 connects densities and form integration to it.
 
 ## Existing code to refactor
 
@@ -178,13 +195,14 @@ against the pinned dependency.
 
 ## What is missing (build here)
 
-Everything the layers specify. The layer order is the order of dependence, and the two hardest items
-— flat smooth dependence (3.1) and singular subdivision (8.2) — gate what follows them. Every layer
-has a compiled interface in `Suggested.lean`: a real definition wherever the pin allows one
-(`mpullback`, `flowDomain`/`flowOf`, `degreeAtRegularValue`, `mgradient`, `laplaceBeltrami`, …),
-otherwise a provisional definition whose type pins the data (a `sorry` body, never a `Prop`-typed
-placeholder) with theorems pinning its characteristic equations. An implementation must provide that
-data and those laws, not those definitions.
+Everything the layers specify beyond the inventory above. The layer order is the order of
+dependence, and the two hardest items — Banach smooth dependence (3.1) and the smoothing theorem
+for chains (8.3) — gate what follows them. Every layer has a compiled interface in `Suggested.lean`:
+a real definition wherever the pin allows one (`mpullback`, `flowDomain`/`flowOf`,
+`degreeAtRegularValue`, `mgradient`, `laplaceBeltrami`, …), otherwise a provisional definition whose
+type pins the data (a `sorry` body, never a `Prop`-typed placeholder) with theorems pinning its
+characteristic equations. An implementation must provide that data and those laws, not those
+definitions.
 
 ## Prior work and coordination
 
@@ -286,11 +304,13 @@ Geometric Topology.
 
 *[Lee, Ch. 15]. Independent of layers 0–1 except in 2.2.*
 
-- **2.1 Orientations.** An `OrientationLift` is a model orientation plus chart signs `M → M → ℤˣ`,
-  locally constant on chart sources and compatible with the sign of the transition Jacobian computed
-  within `range I`; `Manifold.Orientation` is the quotient by the diagonal flip. Then `neg`,
-  `orientationAt` (pinned by `orientationAt_mk`), `Orientable`, and `eq_or_eq_neg` on preconnected
-  `M`.
+- **2.1 Orientations.** An `OrientationLift` is a model orientation plus chart signs indexed by the
+  points of each preferred chart's source — ⚠ never a total `M → M → ℤˣ`, whose off-source values
+  would split the quotient without changing any tangent orientation — locally constant, and
+  compatible with the sign of the transition Jacobian computed within `range I`;
+  `Manifold.Orientation` is the quotient by the diagonal flip. Then `neg`, `orientationAt` (pinned
+  by `orientationAt_mk`), extensionality through it (`Manifold.Orientation.ext`), `Orientable`, and
+  `eq_or_eq_neg` on preconnected `M`.
 - **2.2 Preserving maps and top forms.** `IsOrientationPreservingAt` and its reversing twin, the
   pullback orientation along local diffeomorphisms and product orientations [Lee, Prop. 15.15];
   nowhere-vanishing continuous top forms ↔ orientations, the smooth direction under
@@ -318,11 +338,15 @@ Geometric Topology.
   `C^(n+1)` jointly in time and initial condition (`exists_contDiffAt_localFlow_of_completeSpace`);
   Tau Ceti has the finite-dimensional case. The hardest analysis in the layer, hence a milestone of
   its own.
-- **3.2 The maximal flow.** `flowDomain` and `flowOf` are defined from Tau Ceti's maximal integral
-  curve. **A complete proof of the fundamental theorem of flows [Lee, Thm. 9.12] is required**:
-  joint openness of the domain (`isOpen_flowDomain`), joint smoothness (`contMDiffOn_flowOf`, where
-  3.1 enters), the group law `flowOf_add`, and the one-sided escape lemma `eventually_flowOf_notMem`
-  [Lee, Lemma 9.19].
+- **3.2 The maximal flow.** `flowOf` and `flowDomain` read Tau Ceti's `maximalIntegralCurve` and
+  `maximalIntegralCurveFlowDomain` in the `(t, x)` order — adapters, not a second flow. The
+  fundamental theorem of flows [Lee, Thm. 9.12] is Tau Ceti's for finite-dimensional models:
+  `isOpen_flowDomain`, `contMDiffOn_flowOf`, the group law `flowOf_add` and the escape lemma
+  `eventually_flowOf_notMem` [Lee, Lemma 9.19] are discharged from it in place. **The target is its
+  extension to Banach models**, joint openness and joint smoothness with `[CompleteSpace E]`
+  (`isOpen_maximalIntegralCurveFlowDomain_of_completeSpace`,
+  `contMDiffOn_maximalIntegralCurve_of_completeSpace`), stated for Tau Ceti's own objects; this is
+  where 3.1 enters.
 - **3.3 Completeness and homogeneity.** `IsCompleteVectorField`, the uniform-time criterion,
   compactly supported and compact-manifold completeness (the latter Tau Ceti's),
   `toFlow : Flow ℝ M`; and homogeneity `exists_flowOf_one_eq` on connected boundaryless
@@ -350,9 +374,12 @@ Geometric Topology.
   the nonexample.
 - **4.3 Local Frobenius.** Flat charts (`exists_flatChart`), local integral manifolds as single
   slices in Tau Ceti's `IsSliceChart` sense, weak embeddedness (`exists_contMDiff_factor`)
-  [Lee, Thm. 19.12, 19.17], and the chart adapted to a transverse submanifold [Lee, Cor. 19.13], by
-  induction on the rank from 3.4's canonical form.
-- **4.4 Leaves.** `leafThrough D hD x`, connected, injectively immersed, maximal
+  [Lee, Thm. 19.12, 19.17] for integral manifolds in [Lee]'s sense — ⚠ injectively immersed with a
+  second-countable carrier: the double cover `z ↦ z²` of the circle and the discrete real line are
+  integral manifolds through which the identity does not factor — and the chart adapted to a
+  transverse submanifold [Lee, Cor. 19.13], by induction on the rank from 3.4's canonical form.
+- **4.4 Leaves.** `leafThrough D hD x` on boundaryless `M` (⚠ the full distribution on `[0, ∞)` has
+  no leaf through `0`), connected, injectively immersed, second countable when `M` is, maximal
   (`leafThrough_maximal`), the leaves partitioning `M` (`leafThrough_eq_or_disjoint`)
   [Lee, Thm. 19.21]. A leaf is a type with a finer charted structure, not a `Set`. *Acceptance:*
   affine slices for a constant distribution; `contactDistribution` is not involutive.
@@ -378,9 +405,9 @@ Geometric Topology.
   boundaryless `M`, the interval case against `intervalIntegral`, Green's theorem, and agreement
   with `curveIntegral`.
 - **5.4 The homotopy operator.** `homotopyOperator` on `M × Icc 0 1`, with `homotopyOperator_spec`:
-  for a `C¹` form `ω`, `hω` is `C¹` and `ι₁^*ω − ι₀^*ω = d(hω) + h(dω)`, proved directly rather than
-  through Stokes, so `M` may have boundary. Separately, Stokes on `M × Icc 0 1` for boundaryless
-  `M`, for 10.5.
+  for a `C¹` form `ω` with values in a complete space, `hω` is `C¹` and
+  `ι₁^*ω − ι₀^*ω = d(hω) + h(dω)`, proved directly rather than through Stokes, so `M` may have
+  boundary. Separately, Stokes on `M × Icc 0 1` for boundaryless `M`, for 10.5.
 - **5.5 Densities, and Stokes with corners.** `Density`, `RoughDensity`, `toDensity`
   (`toDensity_apply`), `integralDensity` and `integralTopForm_eq_integralDensity`, making
   integration on nonorientable manifolds a special case [Lee, Ch. 16, "Densities"]; and Stokes on
@@ -400,13 +427,15 @@ Geometric Topology.
 - **6.2 Degree zero and the Poincaré lemma.** `deRhamCohomologyZeroEquiv` with
   `LocallyConstant M ℝ`; the *relative* flat lemma `exists_extDerivWithin_eq_of_starConvex` (⚠
   boundary-chart images are not ambient-open), at every regularity `n ≥ 1`; and its manifold
-  corollary `exists_mextDeriv_eq_nhds` [Lee, Thm. 17.14].
+  corollary `exists_mextDeriv_eq_nhds` [Lee, Thm. 17.14]. Both for a complete coefficient space: ⚠
+  a smooth `c₀₀`-valued `1`-form on `ℝ` has no local primitive.
 - **6.3 Homotopy invariance.** `deRhamCohomology.map_eq_of_homotopy` from 5.4, with no boundaryless
   restriction; `H^{k+1}(E) = 0` for a normed space; `pathIntegral` and the exactness criterion
   `isExactForm_of_forall_pathIntegral_eq_zero` [Lee, Thm. 17.17], hence `H¹_dR = 0` for simply
   connected `M`.
 - **6.4 Compact supports.** `compactlySupportedDeRhamComplex` and `H^•_c`, with the two
-  functorialities of opposite variance `extensionByZero` and `properPullback` — ⚠ nothing for a
+  functorialities of opposite variance `extensionByZero` (⚠ on Hausdorff `M`: on the line with two
+  origins a bump near one origin extends discontinuously) and `properPullback` — ⚠ nothing for a
   general smooth map — and `H^•_c(ℝⁿ)` in all degrees [Lee, Lemma 17.27, Thm. 17.28]. *Acceptance:*
   `H^k_dR(ℝⁿ)`; `[dθ] ≠ 0` in `H¹_dR(S¹)`.
 
@@ -417,46 +446,59 @@ Geometric Topology.
 - **7.1–7.2** `mayerVietorisShortComplex`, sign convention `(res, −res)`, short exact under the
   standing hypotheses; the long exact sequence is Mathlib's, with the connecting map's
   partition-of-unity description [Lee, Cor. 17.42] and naturality.
-- **7.3** `compactlySupportedMayerVietorisShortComplex`, arrows reversed by extension by zero.
-  *Acceptance:* `H^k_dR(Sⁿ)` from the two-cap cover [Lee, Thm. 17.21].
+- **7.3** `compactlySupportedMayerVietorisShortComplex`, arrows reversed by extension by zero, hence
+  on Hausdorff `M`. *Acceptance:* `H^k_dR(Sⁿ)` from the two-cap cover [Lee, Thm. 17.21].
 
-### Layer 8: singular cohomology and the de Rham theorem
+### Layer 8: the de Rham theorem
 
 *[Lee, Ch. 18]. Spaces in `Type`. [Lee]'s route — smooth chains and a Mayer–Vietoris induction — not
-the sheaf route, which the pin cannot support.*
+the sheaf route, which the pin cannot support. Singular (co)homology is the algebraic-topology
+roadmap's and largely in Tau Ceti already; this layer builds smooth chains, integration over them
+and the comparison with de Rham cohomology on those carriers, and never a second singular theory.*
 
-- **8.1 Singular cohomology.** `singularCochainComplexFunctor` (the degreewise dual of Mathlib's
-  chains), `singularCohomology` with its functoriality, homotopy invariance, `H⁰`, and universal
-  coefficients `singularCohomologyEquivDual`; the cup product `singularCohomology.cup`
-  (Alexander–Whitney) and relative cohomology with the long exact sequence of the pair
-  (`relativeSingularShortComplex`).
-- **8.2 Subdivision and Mayer–Vietoris.** `barycentricSubdivision` with its homotopy to the
-  identity, `smallChains` with `quasiIso_smallChainsInclusion`, `singularMayerVietorisShortComplex`
-  [Lee, Thm. 18.4, 18.6], `H_•(Sⁿ; R)` and the fundamental class of `S¹`. The largest single piece
-  of work in the second half; the pin has no chain-level subdivision.
+- **8.1 Singular cohomology, consumed.** Tau Ceti's `TopCat.singularCochainComplex` and
+  `TopCat.singularCohomology` with real coefficients (`realSingularCochains`,
+  `realSingularCohomology`), functoriality `TopCat.singularCohomologyMap`, homotopy invariance, and
+  relative cohomology with the long exact sequence of a pair
+  (`TopPair.singularCochainComplexShortComplex`). **Dependencies on the algebraic-topology roadmap's
+  Stage 6, not targets here:** universal coefficients (the evaluation
+  `H^k(X; ℝ) → Hom(H_k(X; ℝ), ℝ)` and its bijectivity over a field), the cup product, and the
+  Mayer–Vietoris sequence of cochains for a binary open cover, dual to its Stage 3 sequence.
+- **8.2 Subdivision and small chains, consumed.** Tau Ceti's barycentric subdivision with its
+  homotopy to the identity (`TauCeti.singularSubdivisionHomotopy`) and the small-chain theorem
+  (`TauCeti.smallSingularChainHomotopyEquiv`, restated as `quasiIso_realSmallSingularChains`)
+  [Lee, Thm. 18.4, 18.6]; Mayer–Vietoris in homology (`TopCat.mayerVietorisδ`) is Tau Ceti's too.
+  Nothing is built here.
 - **8.3 Smooth chains.** `SmoothSimplex` via `SmoothOnSubset` (⚠ local extendability is the
   definition), `smoothBoundary`, `smoothSingularChainComplex`, and the smoothing theorem
   [Lee, Thm. 18.7] as data: the relative smoothing theorem `exists_smoothSimplex_homotopicRel`, then
-  `smoothing`, `smoothToSingular` and both chain homotopies, over relative Whitney approximation
-  into a manifold.
+  `smoothing`, `smoothToSingular` into Tau Ceti's real singular chains, and both chain homotopies,
+  over relative Whitney approximation into a manifold. Smooth simplices are closed under the
+  simplicial operators, so the smooth chains may be implemented as the chains of a sub-simplicial
+  set of `TopCat.toSSet.obj M`, as Tau Ceti's small chains are.
 - **8.4 Simplices, Stokes for chains, the de Rham map.** The full-dimensional `fullSimplex` bridged
   to Mathlib's barycentric `Convexity.StdSimplex`, faces `simplexFace`, `SmoothSimplex.integral` and
-  `chainIntegral`; Stokes for the simplex (`SmoothSimplex.integral_mextDeriv`, independent of 5.5)
-  and for chains [Lee, Thm. 18.12]; `deRhamHom`, natural and compatible with connecting maps
+  `chainIntegral` (vector-valued forms in complete spaces); Stokes for the simplex
+  (`SmoothSimplex.integral_mextDeriv`, independent of 5.5) and for chains [Lee, Thm. 18.12];
+  `deRhamHom` into `realSingularCohomology`, natural and compatible with connecting maps
   [Lee, Prop. 18.13].
 - **8.5 The de Rham theorem.** `deRhamEquiv` for T2 σ-compact finite-dimensional `M`
-  [Lee, Thm. 18.14], multiplicative (`deRhamHom_wedge`), by the reusable **Mayer–Vietoris induction
-  principle** `mayerVietoris_induction` — ⚠ whose hypotheses include countable disjoint unions,
-  because cohomology does not commute with increasing unions — run over convex opens of `ℝⁿ` and
-  then over charts, never through geodesic convexity. *Acceptance:* `deRhamHom_circleAngularForm`:
-  `[dθ]` evaluates to `2π` on `circleFundamentalClass`.
+  [Lee, Thm. 18.14], by the reusable **Mayer–Vietoris induction principle**
+  `mayerVietoris_induction` — ⚠ whose hypotheses include countable disjoint unions, because
+  cohomology does not commute with increasing unions — run over convex opens of `ℝⁿ` and then over
+  charts, never through geodesic convexity; it consumes layer 7 and 8.1's cochain Mayer–Vietoris
+  sequence. Multiplicativity, that `deRhamHom` carries the wedge to the cup product, is this
+  roadmap's theorem, stated against Stage 6's cup product once that is in the dependency; no cup
+  product is defined here. *Acceptance:* `circleLoop` is a smooth cycle with `∫ dθ = 2π` over it
+  (`circleLoop_integral_circleAngularForm`), and `deRhamHom [dθ] ≠ 0`.
 
 ### Layer 9: Poincaré duality
 
 *[Lee, Problems 18-6 to 18-8; Bott–Tu I §5].*
 
-- **9.1** `poincarePairing`, `⟨[ω], [η]⟩ = ∫_M ω ∧ η` (`poincarePairing_mk`), on oriented
-  boundaryless `M`.
+- **9.1** `poincarePairing`, `⟨[ω], [η]⟩ = ∫_M ω ∧ η` (`poincarePairing_mk`), defined only on T2
+  σ-compact oriented boundaryless `M`: ⚠ the hypotheses of Stokes are what make it well defined on
+  classes, and on `[0, 1]`, `[dx] = 0` while `∫₀¹ dx = 1`.
 - **9.2 Top cohomology.** `H^n_c(M) ≅ ℝ` by integration for connected oriented `M`; `H^n_c(M) = 0`
   for connected nonorientable `M`, and `H^n_dR(M) = 0` if also compact, by descent along the
   orientation cover [Lee, Thm. 17.34].
@@ -481,9 +523,10 @@ the sheaf route, which the pin cannot support.*
 - **10.5 Degree calculus.** Homotopy invariance, `degree_id`, `degree_const`, composition,
   `surjective_of_degree_ne_zero`, `degree_antipodal`; the continuous extension for sphere targets
   and, through 8.3, general targets; `not_exists_retraction` and `exists_fixedPoint_closedBall`;
-  reconciliation with `TauCeti.Circle.fundamentalGroupMulEquiv` on `S¹`. *Acceptance* (dimension
-  `≥ 1`; ⚠ on a point the constant map is the identity): `deg id = 1`, `deg const = 0`,
-  `deg (z ↦ zⁿ) = n`, `deg antipodal = (−1)^{n+1}`.
+  reconciliation with Tau Ceti's `Circle.fundamentalGroupMulEquiv` on `S¹`
+  (`fundamentalGroupMulEquiv_map_eq_zpow_degree`). *Acceptance* (dimension `≥ 1`; ⚠ on a point the
+  constant map is the identity): `deg id = 1`, `deg const = 0`, `deg (z ↦ zⁿ) = n`,
+  `deg antipodal = (−1)^{n+1}`.
 
 ### Layer 11: the hairy ball theorem
 
@@ -510,12 +553,13 @@ Riesz duality.*
 - **12.3 Divergence, Hessian, Laplacian.** `divergence` (the trace of `leviCivitaConnection X`),
   `hessian` (symmetric), `laplaceBeltrami := divergence ∘ mgradient`, the trace of the Hessian
   (`laplaceBeltrami_eq_sum_hessian`), in the `Δ` notation class.
-- **12.4 Volume form, density, measure.** `riemannianVolumeForm` [Lee, Prop. 15.29],
-  `riemannianDensity`, and the Borel `riemannianMeasure`, locally finite, of full support, agreeing
-  with `integralDensity` on compactly supported continuous functions, with positivity through
-  `lintegral` (⚠ never the junk-valued Bochner integral); `d(ι_X dV) = (div X) dV`
-  (`mextDeriv_interior_riemannianVolumeForm`). This is the measure the geometric-topology roadmap
-  consumes.
+- **12.4 Volume form, density, measure.** `riemannianVolumeForm` [Lee, Prop. 15.29] and the
+  invariant `riemannianDensity`, whose chart coefficient is Tau Ceti's `chartVolumeDensity`. The
+  measure is Tau Ceti's `TauCeti.riemannianVolume`, and no second one is defined; the targets are
+  its bridge to densities, agreement with `integralDensity` on compactly supported continuous
+  functions (`integral_riemannianVolume_eq_integralDensity`), full support, and positivity through
+  `lintegral` (⚠ never the junk-valued Bochner integral); and `d(ι_X dV) = (div X) dV`
+  (`mextDeriv_interior_riemannianVolumeForm`).
 - **12.5 Divergence theorem and Green.** `∫_M div X dV = ∫_{∂M} ⟪X, N⟫ dṼ` with the outward unit
   normal [Lee, Thm. 16.32]; `integral_divergence_eq_zero`, `integral_mul_laplaceBeltrami`,
   `integral_laplaceBeltrami_symm` on boundaryless `M`; everything analytic beyond this is the PDE
@@ -552,6 +596,13 @@ Each is a tempting mistake with its refutation.
   into a manifold cannot be patched in the target; local extendability is the definition (8.4).
 - **"The smooth structure of a covering space is an instance on the total space."** It depends on
   the map (2.3).
+- **"Every integral manifold is weakly embedded."** Only the injectively immersed ones with a
+  second-countable carrier: the double cover `z ↦ z²` of the circle and the discrete real line fail.
+- **"A closed form with values in a normed space is locally exact."** A smooth `c₀₀`-valued
+  `1`-form on `ℝ` has no local primitive; the coefficients must be complete.
+- **"Extension by zero exists on every manifold."** On the line with two origins it does not.
+- **"The Poincaré pairing is defined on manifolds with boundary."** On `[0, 1]`, `[dx] = 0` in
+  `H¹_dR`, yet `∫₀¹ dx = 1`.
 - **"`Prop`-typed placeholders are acceptable in `Suggested.lean`."** A condition that cannot yet be
   stated is prose in the README, never `def _ : Prop := sorry`.
 
@@ -559,36 +610,42 @@ Each is a tempting mistake with its refutation.
 
 One owner per shared construction, stated identically on both sides.
 
-- **Universal covers** owns π₁, deck groups, the classification and πₙ; 2.4 and 6.3 consume them.
-- **Geometric topology** consumes the orientation interface (2), singular cohomology with cup
-  product and relative theory (8.1), the distribution and leaf objects (4) that its codimension-one
-  foliations specialize, the density and measure API (5.5, 12.4) on which its hyperbolic volume is
-  defined, and the abstract boundary of manifolds with corners (5.5), along whose faces its gluing
-  operates; the half-space boundary manifold is Tau Ceti's and consumed by both. It owns curvature,
-  hyperbolic structures, tubular and collar neighbourhoods, gluing, tautness, the Euler class, and
-  everything 3-manifold-specific.
+- **Universal covers** owns π₁, deck groups, the classification and πₙ; 2.4, 6.3 and 10.5 consume
+  them.
+- **Geometric topology** consumes the orientation interface (2), the distribution and leaf objects
+  (4) that its codimension-one foliations specialize, densities and form integration (5.5, 12.4),
+  and the abstract boundary of manifolds with corners (5.5), along whose faces its gluing operates;
+  the half-space boundary manifold is Tau Ceti's and consumed by both. It owns the Riemannian volume
+  measure, in Tau Ceti as `TauCeti.riemannianVolume` and consumed by 12.4, curvature, hyperbolic
+  structures, tubular and collar neighbourhoods, gluing, tautness, the Euler class, and everything
+  3-manifold-specific.
+- **Algebraic topology** owns singular chains and cochains, relative theory, subdivision, small
+  chains, excision and Mayer–Vietoris (its Stages 2–3), and universal coefficients, cup and cap
+  products and singular Poincaré duality (Stage 6); layer 8 consumes them and builds only smooth
+  chains, integration over them and the de Rham comparison. It consumes this roadmap's orientation
+  and degree API (layers 2 and 10).
 - **Hopf–Rinow** owns the Levi-Civita connection, covariant differentiation along curves, geodesics
   and their flow, the exponential map, Hopf–Rinow, and the manifold inverse function theorem;
-  layer 12 builds on the connection, 10.1 consumes the inverse function theorem, 3.2 consumes its
-  maximal integral curves, and it consumes the general fundamental theorem of flows for the
-  geodesic flow.
+  layer 12 builds on the connection, 10.1 consumes the inverse function theorem, and 3.2 consumes
+  its maximal integral curves and finite-dimensional maximal flow, whose extension to Banach models
+  is this roadmap's.
 - **Lie groups** owns `lieExp`, one-parameter subgroups, `Ad`, the closed-subgroup and Lie-specific
   theorems, consuming layer 3's flows (reconciled in 3.3), layer 4's Frobenius and leaves, and 2.3's
   covers.
 - **PDE** owns everything analytic about `Δ` beyond 12.5. **DG and `A∞`** owns the generic DGA
-  packaging; the wedge and cup products on cohomology are built here. **Heegaard Floer (analytic)**
-  consumes orientations and degree; layer 0.4 owns migration of its existing 2-form API and
-  consumers to the generic carrier, and 6.1 supplies the integration interface. **Contour
-  integration** owns contour integrals; 5.3 only reconciles with `curveIntegral`. **One-parameter
-  semigroups** owns the operator-semigroup analogue of flows. **Modular forms** may refactor its
-  region-Stokes onto layer 5 at its own choice.
+  packaging; the wedge product on de Rham cohomology is built here, the cup product by algebraic
+  topology. **Heegaard Floer (analytic)** consumes orientations and degree; layer 0.4 owns migration
+  of its existing 2-form API and consumers to the generic carrier, and 6.1 supplies the integration
+  interface. **Contour integration** owns contour integrals; 5.3 only reconciles with
+  `curveIntegral`. **One-parameter semigroups** owns the operator-semigroup analogue of flows.
+  **Modular forms** may refactor its region-Stokes onto layer 5 at its own choice.
 
 ## Ordering
 
 Layers 0–1 first. Layers 2, 3 (except the form half of 3.4) and 12.1–12.3 are independent of them; 4
 needs 3 and 1.4; 12.4–12.5 need 0, 2 and 5. The integration track is 5 → {6, 7} → 8 → 9, with 6 and
 most of 7 available once 0–1 land (6.3 needs only 5.4's homotopy identity); 10 needs 2, 5, 7 and
-9.2; 11 needs 10. Start 3.1 and 8.2 early. Claim single numbered items or smaller; the headline
+9.2; 11 needs 10. Start 3.1 and 8.3 early. Claim single numbered items or smaller; the headline
 theorems (5.3, 8.5, 9.3, 10.4, 11.1) are staged claims whose intermediate lemmas land as reusable
 pull requests.
 

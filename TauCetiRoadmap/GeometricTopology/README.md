@@ -629,10 +629,11 @@ disproved smoothly).
 Mathlib's Riemannian library reaches the metric-and-distance level but stops short of
 volume and curvature, which is exactly what the hyperbolic-geometry Kirby problems need. The
 [Hopf--Rinow roadmap](../HopfRinow/README.md), Layer 1, owns the intervening Levi-Civita
-connection, and the [differential-geometry roadmap](../DifferentialGeometry/README.md) owns the
-Riemannian density and measure built over it (its 5.5 and 12.4: `riemannianDensity`,
-`riemannianMeasure`); this layer consumes both rather than constructing a second connection or a
-second volume. What it builds is curvature and the hyperbolic structures. To state "the Weeks
+connection; this layer consumes that shared connection rather than constructing a second one. The
+Riemannian volume measure is this layer's and is in Tau Ceti as `TauCeti.riemannianVolume`
+(`TauCeti/Geometry/Manifold/Riemannian/VolumeDensity/`); the
+[differential-geometry roadmap](../DifferentialGeometry/README.md) connects its densities and form
+integration to that same measure (its 12.4) rather than defining another. To state "the Weeks
 manifold has the smallest volume" we need that measure, a notion of hyperbolic (complete, constant
 curvature `−1`) structure, and the resulting volume invariant. This is the hardest layer that is
 still close to existing Mathlib.
@@ -641,15 +642,14 @@ still close to existing Mathlib.
 `IsRiemannianManifold`, the induced `riemannianEDist`, and `EMetricSpace.ofRiemannianMetric`
 (`Mathlib/Geometry/Manifold/Riemannian/Basic.lean`); path length in
 `Mathlib/Geometry/Manifold/Riemannian/PathELength.lean`; Mathlib's measure theory and the
-`volume` measure on `ℝⁿ`; the Hopf--Rinow roadmap's Levi-Civita connection; the differential-geometry
-roadmap's `riemannianMeasure` and `riemannianDensity`; layer 1's manifolds; `Matrix.orthogonalGroup`
-for isometry groups.
+`volume` measure on `ℝⁿ`; the Hopf--Rinow roadmap's Levi-Civita connection; Tau Ceti's
+`TauCeti.riemannianVolume`; layer 1's manifolds; `Matrix.orthogonalGroup` for isometry groups.
 
 **What to build.**
-- The total **volume** of a closed Riemannian manifold as a real number, `riemannianMeasure univ`,
-  and its invariance under isometries — consuming the differential-geometry roadmap's Riemannian
-  measure (the density `√det g` in charts, assembled with a partition of unity, is built there,
-  not here).
+- The **Riemannian volume measure** from the metric, the density `√det g` in charts glued over the
+  chart sources, with its invariance under isometries: in Tau Ceti as `TauCeti.riemannianVolume`.
+  Then the total **volume** of a closed Riemannian manifold as a real number,
+  `(TauCeti.riemannianVolume I M univ).toReal`.
 - **Curvature**: using the Levi-Civita connection supplied by the Hopf--Rinow roadmap, build the
   Riemann curvature tensor and sectional and Ricci curvature, enough to *state* "constant
   sectional curvature `κ`" (Lee,
@@ -671,10 +671,10 @@ for isometry groups.
   *virtually* so (a finite cover is).
 
 ```lean
--- the Riemannian measure is DifferentialGeometry's `riemannianMeasure`; the volume is its total mass
--- noncomputable def volume (M) [Closed M] [IsRiemannianManifold I M] : ℝ := (riemannianMeasure I M univ).toReal
+-- the Riemannian measure is Tau Ceti's `TauCeti.riemannianVolume`; the volume is its total mass
+-- noncomputable def volume (M) [Closed M] [IsRiemannianManifold I M] : ℝ := (TauCeti.riemannianVolume I M univ).toReal
 -- structure HyperbolicMetric (M) where metric : RiemannianMetric M; complete : …; curv : sectionalCurvature metric = -1
--- noncomputable def hypVolumeOfMetric (g : HyperbolicMetric M) : ℝ := (riemannianMeasure I M univ).toReal  -- for the metric g
+-- noncomputable def hypVolumeOfMetric (g : HyperbolicMetric M) : ℝ := (TauCeti.riemannianVolume I M univ).toReal  -- for the metric g
 -- theorem hypVolume_indep (g g' : HyperbolicMetric M) [Closed M] (h : 3 ≤ dim M) : hypVolumeOfMetric g = hypVolumeOfMetric g'  -- Mostow
 -- noncomputable def hypVolume (M) [Closed M] (h : Nonempty (HyperbolicMetric M)) : ℝ := …  -- via hypVolume_indep
 -- theorem weeks_minimal_volume (M) (h : ClosedOrientableHyperbolic3 M) : hypVolume weeksManifold ≤ hypVolume M
@@ -1129,8 +1129,8 @@ Layer 1 is the spine almost everything else waits on, so push it first; layers 2
 genuinely parallel on-ramps. Layer 4 (knot theory) is a substantial subproject that can
 also start immediately and is owned here; layer 5 (Dehn surgery) follows layer 1 and layer
 4's knot types, and layer 6 (concordance) follows layer 4. Layers 7 and 8 share a
-Riemannian substrate and should be planned together, after the differential-geometry roadmap's
-Riemannian measure lands. Layers 9, 10, and 11 are independent of each other and can begin once layer 1's
+Riemannian substrate and should be planned together, after the layer-7 volume measure
+lands. Layers 9, 10, and 11 are independent of each other and can begin once layer 1's
 handlebody and tangent-field API exists. The homological concordance invariants (`τ`, `s`)
 are coordinated with the combinatorial Heegaard Floer roadmap, which consumes layer 4's
 knot types in return.
